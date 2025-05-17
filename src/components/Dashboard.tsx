@@ -8,10 +8,13 @@ import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
 import InsightCard from './InsightCard';
 import MedicalRecordAnalysis from './MedicalRecordAnalysis';
+import NewNLPAnalysis from './NewNLPAnalysis';
+import { toast } from 'sonner';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
 
   const handleViewPatientRecord = (patientId: string) => {
     const record = medicalRecords.find(record => record.patientId === patientId);
@@ -21,6 +24,11 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleNewAnalysis = () => {
+    setIsNewAnalysisOpen(true);
+    toast.info("Starting new NLP analysis session");
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-8">
@@ -28,7 +36,7 @@ const Dashboard: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Medical Dashboard</h1>
           <p className="text-gray-500">Analyze patient records with AI assistance</p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button className="flex items-center gap-2" onClick={handleNewAnalysis}>
           <BrainCircuit className="h-4 w-4" />
           <span>New NLP Analysis</span>
         </Button>
@@ -176,6 +184,11 @@ const Dashboard: React.FC = () => {
         record={selectedRecord}
         isOpen={isAnalysisOpen}
         onClose={() => setIsAnalysisOpen(false)}
+      />
+
+      <NewNLPAnalysis
+        isOpen={isNewAnalysisOpen}
+        onClose={() => setIsNewAnalysisOpen(false)}
       />
     </div>
   );
