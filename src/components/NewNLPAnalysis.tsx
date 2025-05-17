@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { BrainCircuit, FileText, Check, AlertCircle } from 'lucide-react';
+import { BrainCircuit, FileText, Check, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface NewNLPAnalysisProps {
@@ -18,6 +18,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
   const [medicalText, setMedicalText] = useState('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleAnalyze = () => {
     if (!medicalText.trim()) {
@@ -40,6 +41,45 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
         setIsAnalyzing(false);
       }
     }, 800);
+  };
+
+  const handleSaveAnalysis = () => {
+    if (!analysisResult) {
+      toast.error('No analysis to save');
+      return;
+    }
+
+    setIsSaving(true);
+
+    // Simulate saving to database
+    setTimeout(() => {
+      // In a real app, this would be an API call to save the data
+      try {
+        // Create a saved analysis object
+        const savedAnalysis = {
+          id: `analysis-${Date.now()}`,
+          date: new Date().toISOString(),
+          text: medicalText,
+          result: analysisResult,
+        };
+
+        // In a real app, we would save this to a database
+        // For now, let's save it to localStorage to simulate persistence
+        const savedAnalyses = JSON.parse(localStorage.getItem('savedAnalyses') || '[]');
+        savedAnalyses.push(savedAnalysis);
+        localStorage.setItem('savedAnalyses', JSON.stringify(savedAnalyses));
+
+        toast.success('Analysis saved successfully');
+        
+        // Close the modal after saving
+        handleClose();
+      } catch (error) {
+        toast.error('Error saving analysis');
+        console.error('Save error:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 500);
   };
 
   const handleClose = () => {
@@ -194,7 +234,20 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
               
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={handleClose}>Close</Button>
-                <Button>Save Analysis</Button>
+                <Button 
+                  onClick={handleSaveAnalysis} 
+                  disabled={isSaving}
+                  className="flex items-center gap-2"
+                >
+                  {isSaving ? (
+                    <>Saving<span className="animate-pulse">...</span></>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Save Analysis</span>
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}

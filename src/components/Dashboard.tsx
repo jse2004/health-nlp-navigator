@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, MessageSquare } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, MessageSquare, Save } from 'lucide-react';
 import { patients, medicalRecords, analyticsSummary, insightData, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -10,11 +10,44 @@ import InsightCard from './InsightCard';
 import MedicalRecordAnalysis from './MedicalRecordAnalysis';
 import NewNLPAnalysis from './NewNLPAnalysis';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
+  const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Load saved analyses from localStorage
+    const loadSavedAnalyses = () => {
+      try {
+        const saved = localStorage.getItem('savedAnalyses');
+        if (saved) {
+          setSavedAnalyses(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.error('Error loading saved analyses:', error);
+      }
+    };
+    
+    loadSavedAnalyses();
+
+    // Set up event listener to detect changes in localStorage
+    const handleStorageChange = () => {
+      loadSavedAnalyses();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event listener for same-tab updates
+    window.addEventListener('savedAnalysesUpdated', loadSavedAnalyses);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('savedAnalysesUpdated', loadSavedAnalyses);
+    };
+  }, []);
 
   const handleViewPatientRecord = (patientId: string) => {
     const record = medicalRecords.find(record => record.patientId === patientId);
@@ -27,6 +60,32 @@ const Dashboard: React.FC = () => {
   const handleNewAnalysis = () => {
     setIsNewAnalysisOpen(true);
     toast.info("Starting new NLP analysis session");
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', { 
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  const handleDeleteAnalysis = (id: string) => {
+    try {
+      const updatedAnalyses = savedAnalyses.filter(analysis => analysis.id !== id);
+      localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
+      setSavedAnalyses(updatedAnalyses);
+      toast.success('Analysis deleted successfully');
+      
+      // Dispatch custom event to notify other tabs/components
+      window.dispatchEvent(new Event('savedAnalysesUpdated'));
+    } catch (error) {
+      toast.error('Error deleting analysis');
+      console.error('Delete error:', error);
+    }
   };
 
   return (
@@ -58,6 +117,10 @@ const Dashboard: React.FC = () => {
             <TabsTrigger value="records" className="flex items-center gap-1">
               <FileText className="h-4 w-4" />
               <span>Medical Records</span>
+            </TabsTrigger>
+            <TabsTrigger value="saved-analyses" className="flex items-center gap-1">
+              <Save className="h-4 w-4" />
+              <span>Saved Analyses</span>
             </TabsTrigger>
             <TabsTrigger value="messages" className="flex items-center gap-1">
               <MessageSquare className="h-4 w-4" />
@@ -166,6 +229,106 @@ const Dashboard: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="saved-analyses" className="mt-0">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Saved NLP Analyses</h2>
+              <Button variant="outline" size="sm" onClick={handleNewAnalysis}>
+                <BrainCircuit className="h-4 w-4 mr-1" />
+                <span>New Analysis</span>
+              </Button>
+            </div>
+            
+            {savedAnalyses.length === 0 ? (
+              <div className="text-center py-10">
+                <Save className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-gray-700">No saved analyses yet</h3>
+                <p className="text-gray-500 max-w-sm mx-auto">
+                  Create a new analysis using the "New NLP Analysis" button and save it to view it here.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Text Sample
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Diagnoses
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Severity
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {savedAnalyses.map((analysis) => (
+                      <tr key={analysis.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(analysis.date)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                          {analysis.text.substring(0, 100)}{analysis.text.length > 100 ? '...' : ''}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {analysis.result.suggestedDiagnosis && 
+                              analysis.result.suggestedDiagnosis.slice(0, 2).map((diagnosis: string, i: number) => (
+                              <Badge key={i} variant="outline" className="bg-medical-primary/5">
+                                {diagnosis}
+                              </Badge>
+                            ))}
+                            {analysis.result.suggestedDiagnosis && 
+                              analysis.result.suggestedDiagnosis.length > 2 && (
+                              <Badge variant="outline" className="bg-gray-50">
+                                +{analysis.result.suggestedDiagnosis.length - 2} more
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {analysis.result.severity && (
+                            <div className="flex items-center">
+                              <div className="h-2 w-16 bg-gray-200 rounded-full">
+                                <div 
+                                  className={`h-full rounded-full ${
+                                    analysis.result.severity >= 8 ? 'bg-medical-critical' : 
+                                    analysis.result.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
+                                  }`}
+                                  style={{ width: `${(analysis.result.severity / 10) * 100}%` }}
+                                />
+                              </div>
+                              <span className="ml-2 text-xs text-gray-500">{analysis.result.severity}/10</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteAnalysis(analysis.id)}
+                            className="text-destructive"
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </TabsContent>
 
