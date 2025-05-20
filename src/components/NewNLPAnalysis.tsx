@@ -3,26 +3,59 @@ import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { BrainCircuit, FileText, Check, Save } from 'lucide-react';
+import { BrainCircuit, FileText, Save, User, Stethoscope, Pill } from 'lucide-react';
 import { toast } from 'sonner';
+import { Label } from '@/components/ui/label';
+import { 
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage
+} from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
 
 interface NewNLPAnalysisProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface StudentRecord {
+  studentName: string;
+  studentId: string;
+  courseYear: string;
+  symptoms: string;
+  diagnosis: string;
+  medication: string;
+}
+
 const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
-  const [medicalText, setMedicalText] = useState('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const form = useForm<StudentRecord>({
+    defaultValues: {
+      studentName: '',
+      studentId: '',
+      courseYear: '',
+      symptoms: '',
+      diagnosis: '',
+      medication: ''
+    }
+  });
+
   const handleAnalyze = () => {
-    if (!medicalText.trim()) {
-      toast.error('Please enter medical text to analyze');
+    const symptoms = form.getValues('symptoms');
+    
+    if (!symptoms.trim()) {
+      toast.error('Please enter symptoms to analyze');
       return;
     }
 
@@ -31,11 +64,17 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
     // Small timeout to simulate processing
     setTimeout(() => {
       try {
-        const result = analyzeMedicalText(medicalText);
+        const result = analyzeMedicalText(symptoms);
         setAnalysisResult(result);
-        toast.success('Analysis completed successfully');
+        
+        // Auto-fill diagnosis based on NLP analysis
+        if (result.suggestedDiagnosis && result.suggestedDiagnosis.length > 0) {
+          form.setValue('diagnosis', result.suggestedDiagnosis.join(', '));
+        }
+        
+        toast.success('Symptoms analyzed successfully');
       } catch (error) {
-        toast.error('Error analyzing text');
+        toast.error('Error analyzing symptoms');
         console.error('Analysis error:', error);
       } finally {
         setIsAnalyzing(false);
@@ -43,9 +82,9 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
     }, 800);
   };
 
-  const handleSaveAnalysis = () => {
+  const handleSaveAnalysis = (data: StudentRecord) => {
     if (!analysisResult) {
-      toast.error('No analysis to save');
+      toast.error('Please analyze symptoms first');
       return;
     }
 
@@ -53,28 +92,27 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
 
     // Simulate saving to database
     setTimeout(() => {
-      // In a real app, this would be an API call to save the data
       try {
-        // Create a saved analysis object
-        const savedAnalysis = {
-          id: `analysis-${Date.now()}`,
+        // Create a saved record
+        const savedRecord = {
+          id: `record-${Date.now()}`,
           date: new Date().toISOString(),
-          text: medicalText,
-          result: analysisResult,
+          ...data,
+          nlpResult: analysisResult,
         };
 
         // In a real app, we would save this to a database
         // For now, let's save it to localStorage to simulate persistence
-        const savedAnalyses = JSON.parse(localStorage.getItem('savedAnalyses') || '[]');
-        savedAnalyses.push(savedAnalysis);
-        localStorage.setItem('savedAnalyses', JSON.stringify(savedAnalyses));
+        const savedRecords = JSON.parse(localStorage.getItem('savedRecords') || '[]');
+        savedRecords.push(savedRecord);
+        localStorage.setItem('savedRecords', JSON.stringify(savedRecords));
 
-        toast.success('Analysis saved successfully');
+        toast.success('Student clinic record saved successfully');
         
         // Close the modal after saving
         handleClose();
       } catch (error) {
-        toast.error('Error saving analysis');
+        toast.error('Error saving record');
         console.error('Save error:', error);
       } finally {
         setIsSaving(false);
@@ -83,160 +121,278 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
   };
 
   const handleClose = () => {
-    setMedicalText('');
+    form.reset();
     setAnalysisResult(null);
     onClose();
   };
-
-  // Calculate severity level label
-  const getSeverityLabel = (value?: number) => {
-    if (!value) return { label: "Unknown", color: "text-gray-500" };
-    if (value >= 8) return { label: "High", color: "text-medical-critical" };
-    if (value >= 5) return { label: "Medium", color: "text-medical-warning" };
-    return { label: "Low", color: "text-medical-success" };
-  };
-  
-  const severityInfo = getSeverityLabel(analysisResult?.severity);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent className="w-full md:max-w-[600px] overflow-y-auto">
         <SheetHeader className="border-b pb-4">
           <SheetTitle className="flex items-center gap-2">
-            <BrainCircuit className="h-5 w-5" />
-            New NLP Analysis
+            <FileText className="h-5 w-5" />
+            New Student Clinic Record
           </SheetTitle>
         </SheetHeader>
         
         <div className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="medical-text" className="block text-sm font-medium mb-2">
-              Enter Medical Text to Analyze
-            </label>
-            <Textarea
-              id="medical-text"
-              placeholder="Enter doctor's notes, symptoms, or medical record text..."
-              className="min-h-[150px]"
-              value={medicalText}
-              onChange={(e) => setMedicalText(e.target.value)}
-            />
-            <div className="mt-2 flex justify-end">
-              <Button 
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || !medicalText.trim()}
-                className="flex items-center gap-2"
-              >
-                {isAnalyzing ? (
-                  <>Analyzing<span className="animate-pulse">...</span></>
-                ) : (
-                  <>
-                    <BrainCircuit className="h-4 w-4" />
-                    <span>Analyze Text</span>
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-          
-          {analysisResult && (
-            <div className="space-y-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSaveAnalysis)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Student Information */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Student Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="studentName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Student Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Full name" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="studentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Student ID</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Student ID number" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="courseYear"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Course & Year</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., BSN-3" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+              
+                {/* Symptoms */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <BrainCircuit className="h-4 w-4" />
+                      Symptoms
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="symptoms"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Describe symptoms here..."
+                              className="min-h-[120px]" 
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="mt-2 flex justify-end">
+                      <Button 
+                        type="button"
+                        onClick={handleAnalyze}
+                        disabled={isAnalyzing || !form.getValues('symptoms').trim()}
+                        className="flex items-center gap-2"
+                      >
+                        {isAnalyzing ? (
+                          <>Analyzing<span className="animate-pulse">...</span></>
+                        ) : (
+                          <>
+                            <BrainCircuit className="h-4 w-4" />
+                            <span>Analyze Symptoms</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Diagnosis */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Analysis Results
+                    <Stethoscope className="h-4 w-4" />
+                    Diagnosis
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {analysisResult.severity !== undefined && (
-                    <div className="mb-4">
-                      <p className="text-sm mb-1">Severity Assessment:</p>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-24 bg-gray-200 rounded-full">
-                          <div 
-                            className={`h-full rounded-full ${
-                              analysisResult.severity >= 8 ? 'bg-medical-critical' : 
-                              analysisResult.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
-                            }`}
-                            style={{ width: `${(analysisResult.severity / 10) * 100}%` }}
+                  <FormField
+                    control={form.control}
+                    name="diagnosis"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter diagnosis here..."
+                            className="min-h-[80px]" 
+                            {...field}
                           />
-                        </div>
-                        <Badge 
-                          className={`${severityInfo.color} bg-opacity-10`}
-                          variant="outline"
-                        >
-                          {severityInfo.label} ({analysisResult.severity}/10)
-                        </Badge>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {analysisResult.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm mb-1">Suggested Diagnoses:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {analysisResult.suggestedDiagnosis.map((diagnosis: string, i: number) => (
-                          <Badge key={i} variant="outline" className="bg-medical-primary/5">
-                            {diagnosis}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {analysisResult.entities && analysisResult.entities.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm mb-1">Detected Entities:</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(
-                          analysisResult.entities.reduce((acc: Record<string, any[]>, entity: any) => {
-                            if (!acc[entity.type]) acc[entity.type] = [];
-                            acc[entity.type].push(entity);
-                            return acc;
-                          }, {})
-                        ).slice(0, 4).map(([type, entities]: [string, any]) => (
-                          <div key={type} className="mb-2">
-                            <h4 className="text-xs uppercase text-gray-500 mb-1">{type}</h4>
-                            <div className="flex flex-wrap gap-1">
-                              {(entities as any[]).slice(0, 3).map((entity, i) => (
-                                <Badge 
-                                  key={i}
-                                  variant="outline" 
-                                  className="bg-gray-50"
-                                >
-                                  {entity.text}
-                                </Badge>
-                              ))}
-                              {entities.length > 3 && (
-                                <Badge variant="outline" className="bg-gray-50">
-                                  +{entities.length - 3} more
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {analysisResult.keyPhrases && analysisResult.keyPhrases.length > 0 && (
-                    <div>
-                      <p className="text-sm mb-1">Key Phrases:</p>
-                      <ul className="list-disc pl-5 text-sm">
-                        {analysisResult.keyPhrases.map((phrase: string, i: number) => (
-                          <li key={i} className="mb-1">{phrase}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </Card>
               
+              {/* Medication */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Pill className="h-4 w-4" />
+                    Prescribed Medication
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="medication"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter prescribed medication here..."
+                            className="min-h-[80px]" 
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+              
+              {analysisResult && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      AI Analysis Results
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {analysisResult.severity !== undefined && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1">Severity Assessment:</p>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-24 bg-gray-200 rounded-full">
+                            <div 
+                              className={`h-full rounded-full ${
+                                analysisResult.severity >= 8 ? 'bg-medical-critical' : 
+                                analysisResult.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
+                              }`}
+                              style={{ width: `${(analysisResult.severity / 10) * 100}%` }}
+                            />
+                          </div>
+                          <Badge 
+                            className={`${analysisResult.severity >= 8 ? 'text-medical-critical' : 
+                              analysisResult.severity >= 5 ? 'text-medical-warning' : 'text-medical-success'} 
+                              bg-opacity-10`}
+                            variant="outline"
+                          >
+                            {analysisResult.severity >= 8 ? 'High' : 
+                             analysisResult.severity >= 5 ? 'Medium' : 'Low'} 
+                             ({analysisResult.severity}/10)
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {analysisResult.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1">Suggested Diagnoses:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {analysisResult.suggestedDiagnosis.map((diagnosis: string, i: number) => (
+                            <Badge key={i} variant="outline" className="bg-medical-primary/5">
+                              {diagnosis}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysisResult.entities && analysisResult.entities.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1">Detected Entities:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(
+                            analysisResult.entities.reduce((acc: Record<string, any[]>, entity: any) => {
+                              if (!acc[entity.type]) acc[entity.type] = [];
+                              acc[entity.type].push(entity);
+                              return acc;
+                            }, {})
+                          ).slice(0, 4).map(([type, entities]: [string, any]) => (
+                            <div key={type} className="mb-2">
+                              <h4 className="text-xs uppercase text-gray-500 mb-1">{type}</h4>
+                              <div className="flex flex-wrap gap-1">
+                                {(entities as any[]).slice(0, 3).map((entity, i) => (
+                                  <Badge 
+                                    key={i}
+                                    variant="outline" 
+                                    className="bg-gray-50"
+                                  >
+                                    {entity.text}
+                                  </Badge>
+                                ))}
+                                {entities.length > 3 && (
+                                  <Badge variant="outline" className="bg-gray-50">
+                                    +{entities.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {analysisResult.keyPhrases && analysisResult.keyPhrases.length > 0 && (
+                      <div>
+                        <p className="text-sm mb-1">Key Phrases:</p>
+                        <ul className="list-disc pl-5 text-sm">
+                          {analysisResult.keyPhrases.map((phrase: string, i: number) => (
+                            <li key={i} className="mb-1">{phrase}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={handleClose}>Close</Button>
+                <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>
                 <Button 
-                  onClick={handleSaveAnalysis} 
-                  disabled={isSaving}
+                  type="submit"
+                  disabled={isSaving || !form.getValues('studentName')}
                   className="flex items-center gap-2"
                 >
                   {isSaving ? (
@@ -244,13 +400,13 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      <span>Save Analysis</span>
+                      <span>Save Record</span>
                     </>
                   )}
                 </Button>
               </div>
-            </div>
-          )}
+            </form>
+          </Form>
         </div>
       </SheetContent>
     </Sheet>
