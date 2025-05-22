@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MedicalRecord } from '@/data/sampleData';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
 import { 
@@ -9,32 +9,92 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Clipboard, FileText, BarChart, Award, Stethoscope } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Clipboard, FileText, BarChart, Award, Stethoscope, Download, Save } from 'lucide-react';
+import { toast } from 'sonner';
+import { saveMedicalRecord } from '@/services/dataService';
 
 interface MedicalRecordAnalysisProps {
   record?: MedicalRecord;
   isOpen: boolean;
   onClose: () => void;
+  onSaved?: () => void;
 }
 
 const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({ 
   record, 
   isOpen,
-  onClose
+  onClose,
+  onSaved
 }) => {
   const [activeTab, setActiveTab] = useState('summary');
+  const [editedRecord, setEditedRecord] = useState<Partial<MedicalRecord>>({});
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Initialize edited record when the record changes
+  useEffect(() => {
+    if (record) {
+      setEditedRecord({ ...record });
+      
+      // Analyze the doctor's notes using our NLP utility
+      const doctorNotes = record.doctorNotes || record.notes || '';
+      const result = analyzeMedicalText(doctorNotes);
+      setAnalysisResult(result);
+    }
+  }, [record]);
   
   // If no record is selected, don't render anything
   if (!record) {
     return null;
   }
+
+  // Handle save
+  const handleSave = async () => {
+    if (!editedRecord) return;
+    
+    setIsSaving(true);
+    try {
+      await saveMedicalRecord(editedRecord);
+      toast.success("Medical record saved successfully");
+      if (onSaved) onSaved();
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving record:', error);
+      toast.error("Failed to save medical record");
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
-  // Safely get doctor's notes ensuring we have a string
-  const doctorNotes = record.doctorNotes || record.notes || '';
-  
-  // Analyze the doctor's notes using our NLP utility
-  const analysisResult = analyzeMedicalText(doctorNotes);
-  
+  // Handle input change
+  const handleInputChange = (field: keyof MedicalRecord, value: any) => {
+    setEditedRecord(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle recommended action change
+  const handleActionChange = (index: number, value: string) => {
+    const updatedActions = [...(editedRecord.recommendedActions || [])];
+    updatedActions[index] = value;
+    handleInputChange('recommendedActions', updatedActions);
+  };
+
+  // Add a new recommended action
+  const addRecommendedAction = () => {
+    const updatedActions = [...(editedRecord.recommendedActions || []), ''];
+    handleInputChange('recommendedActions', updatedActions);
+  };
+
+  // Remove a recommended action
+  const removeRecommendedAction = (index: number) => {
+    const updatedActions = [...(editedRecord.recommendedActions || [])];
+    updatedActions.splice(index, 1);
+    handleInputChange('recommendedActions', updatedActions);
+  };
+
   // Calculate severity level label
   const getSeverityLabel = (value: number) => {
     if (value >= 8) return { label: "High", color: "text-medical-critical" };
@@ -42,27 +102,128 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
     return { label: "Low", color: "text-medical-success" };
   };
   
-  const severityInfo = getSeverityLabel(record.severity);
+  const severityInfo = getSeverityLabel(editedRecord.severity || 0);
+
+  // Download record as PDF
+  const downloadRecord = () => {
+    // Create content for the PDF
+    const content = `
+Medical Record
+--------------
+Record ID: ${editedRecord.id}
+Date: ${editedRecord.date}
+Patient: ${editedRecord.patientName}
+
+Diagnosis: ${editedRecord.diagnosis}
+
+Doctor's Notes:
+${editedRecord.doctorNotes || editedRecord.notes}
+
+Severity: ${editedRecord.severity}/10
+
+Recommended Actions:
+${(editedRecord.recommendedActions || []).map((action, i) => `${i + 1}. ${action}`).join('\n')}
+    `;
+    
+    // Create a blob and download it
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `medical-record-${editedRecord.id}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success('Record downloaded successfully');
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full md:max-w-[600px] overflow-y-auto">
         <SheetHeader className="border-b pb-4">
-          <SheetTitle className="text-xl">Medical Record Analysis</SheetTitle>
+          <SheetTitle className="text-xl">Medical Record And Analysis</SheetTitle>
         </SheetHeader>
         
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-semibold">{record.diagnosis}</h2>
-              <p className="text-sm text-gray-500">Record ID: {record.id} • {record.date}</p>
+              {isEditing ? (
+                <Input
+                  value={editedRecord.diagnosis || ''}
+                  onChange={(e) => handleInputChange('diagnosis', e.target.value)}
+                  className="font-semibold text-lg"
+                  placeholder="Diagnosis"
+                />
+              ) : (
+                <h2 className="text-lg font-semibold">{editedRecord.diagnosis}</h2>
+              )}
+              <p className="text-sm text-gray-500">Record ID: {editedRecord.id} • {new Date(editedRecord.date || '').toLocaleDateString()}</p>
             </div>
-            <Badge 
-              className={`${severityInfo.color} bg-opacity-10`}
-              variant="outline"
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Input 
+                  type="number" 
+                  min="1" 
+                  max="10" 
+                  value={editedRecord.severity || 5} 
+                  onChange={(e) => handleInputChange('severity', parseInt(e.target.value))}
+                  className="w-16" 
+                />
+                <span className="text-sm self-center">/10</span>
+              </div>
+            ) : (
+              <Badge 
+                className={`${severityInfo.color} bg-opacity-10`}
+                variant="outline"
+              >
+                Severity: {severityInfo.label}
+              </Badge>
+            )}
+          </div>
+          
+          <div className="mb-4 flex justify-end space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={downloadRecord}
+              className="flex items-center gap-1"
             >
-              Severity: {severityInfo.label}
-            </Badge>
+              <Download className="h-4 w-4" />
+              <span>Download</span>
+            </Button>
+            {isEditing ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setEditedRecord({ ...record });
+                    setIsEditing(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex items-center gap-1"
+                >
+                  <Save className="h-4 w-4" />
+                  <span>{isSaving ? 'Saving...' : 'Save'}</span>
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit
+              </Button>
+            )}
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -82,10 +243,33 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p>{doctorNotes}</p>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedRecord.doctorNotes || editedRecord.notes || ''}
+                      onChange={(e) => {
+                        const notes = e.target.value;
+                        handleInputChange('doctorNotes', notes);
+                        // Re-analyze the text
+                        const result = analyzeMedicalText(notes);
+                        setAnalysisResult(result);
+                      }}
+                      className="min-h-[150px]"
+                      placeholder="Enter doctor's notes"
+                    />
+                  ) : (
+                    <p>{editedRecord.doctorNotes || editedRecord.notes || ''}</p>
+                  )}
                   
                   <div className="mt-4 flex justify-end">
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center gap-1"
+                      onClick={() => {
+                        navigator.clipboard.writeText(editedRecord.doctorNotes || editedRecord.notes || '');
+                        toast.success('Copied to clipboard');
+                      }}
+                    >
                       <Clipboard className="h-4 w-4" />
                       <span>Copy</span>
                     </Button>
@@ -101,14 +285,28 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm font-medium">{record.diagnosis}</p>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedRecord.diagnosis || ''}
+                      onChange={(e) => handleInputChange('diagnosis', e.target.value)}
+                      className="min-h-[80px]"
+                      placeholder="Enter diagnosis"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">{editedRecord.diagnosis}</p>
+                  )}
                   
-                  {analysisResult.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
+                  {analysisResult?.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
                     <div className="mt-3">
                       <p className="text-xs text-gray-500 mb-1">AI-Suggested Diagnoses:</p>
                       <div className="flex flex-wrap gap-1">
-                        {analysisResult.suggestedDiagnosis.map((diagnosis, i) => (
-                          <Badge key={i} variant="outline" className="bg-medical-primary/5">
+                        {analysisResult.suggestedDiagnosis.map((diagnosis: string, i: number) => (
+                          <Badge 
+                            key={i} 
+                            variant="outline" 
+                            className="bg-medical-primary/5 cursor-pointer"
+                            onClick={() => isEditing && handleInputChange('diagnosis', diagnosis)}
+                          >
                             {diagnosis}
                           </Badge>
                         ))}
@@ -128,10 +326,10 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {analysisResult.entities.length > 0 ? (
+                  {analysisResult?.entities.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {Object.entries(
-                        analysisResult.entities.reduce((acc: Record<string, any[]>, entity) => {
+                        analysisResult.entities.reduce((acc: Record<string, any[]>, entity: any) => {
                           if (!acc[entity.type]) acc[entity.type] = [];
                           acc[entity.type].push(entity);
                           return acc;
@@ -172,7 +370,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   <div className="mb-4">
                     <h4 className="text-xs uppercase text-gray-500 mb-1">Key Phrases</h4>
                     <ul className="list-disc pl-5 text-sm">
-                      {analysisResult.keyPhrases.map((phrase, i) => (
+                      {analysisResult?.keyPhrases.map((phrase: string, i: number) => (
                         <li key={i} className="mb-1">{phrase}</li>
                       ))}
                     </ul>
@@ -183,13 +381,13 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                     <div className="bg-gray-100 rounded-full h-2 w-full mt-2">
                       <div 
                         className={`h-full rounded-full ${
-                          analysisResult.sentiment.score < 0 
+                          analysisResult?.sentiment.score < 0 
                             ? 'bg-medical-critical' 
                             : 'bg-medical-success'
                         }`}
                         style={{ 
-                          width: `${Math.abs(analysisResult.sentiment.score * 50) + 50}%`,
-                          marginLeft: analysisResult.sentiment.score < 0 ? 'auto' : '0'
+                          width: `${Math.abs((analysisResult?.sentiment.score || 0) * 50) + 50}%`,
+                          marginLeft: (analysisResult?.sentiment.score || 0) < 0 ? 'auto' : '0'
                         }}
                       />
                     </div>
@@ -212,26 +410,62 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {record.recommendedActions && record.recommendedActions.length > 0 ? (
-                    <ul className="space-y-2">
-                      {record.recommendedActions.map((action, index) => (
-                        <li key={index} className="flex items-center gap-2">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      {(editedRecord.recommendedActions || []).map((action, index) => (
+                        <div key={index} className="flex items-center gap-2">
                           <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
                             <span className="text-xs text-medical-primary">{index + 1}</span>
                           </div>
-                          <span className="text-sm">{action}</span>
-                        </li>
+                          <Input
+                            value={action}
+                            onChange={(e) => handleActionChange(index, e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => removeRecommendedAction(index)}
+                            className="h-8 w-8 text-destructive"
+                          >
+                            &times;
+                          </Button>
+                        </div>
                       ))}
-                    </ul>
+                      
+                      <Button 
+                        variant="outline" 
+                        type="button" 
+                        onClick={addRecommendedAction}
+                        className="w-full mt-2"
+                      >
+                        + Add Action
+                      </Button>
+                    </div>
                   ) : (
-                    <p className="text-sm text-gray-500">No recommended actions</p>
+                    editedRecord.recommendedActions && editedRecord.recommendedActions.length > 0 ? (
+                      <ul className="space-y-2">
+                        {editedRecord.recommendedActions.map((action, index) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs text-medical-primary">{index + 1}</span>
+                            </div>
+                            <span className="text-sm">{action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-500">No recommended actions</p>
+                    )
                   )}
                   
                   <div className="mt-6 flex justify-end space-x-2">
                     <Button variant="outline" size="sm" onClick={onClose}>
                       Close
                     </Button>
-                    <Button size="sm">Create Treatment Plan</Button>
+                    {!isEditing && (
+                      <Button size="sm" onClick={() => setIsEditing(true)}>Edit</Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -9,7 +9,95 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      medical_records: {
+        Row: {
+          created_at: string | null
+          date: string | null
+          diagnosis: string | null
+          doctor_notes: string | null
+          id: string
+          notes: string | null
+          patient_id: string | null
+          patient_name: string | null
+          recommended_actions: string[] | null
+          severity: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string | null
+          diagnosis?: string | null
+          doctor_notes?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          patient_name?: string | null
+          recommended_actions?: string[] | null
+          severity?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string | null
+          diagnosis?: string | null
+          doctor_notes?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string | null
+          patient_name?: string | null
+          recommended_actions?: string[] | null
+          severity?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          age: number
+          condition: string | null
+          created_at: string | null
+          gender: string
+          id: string
+          last_visit: string | null
+          medical_history: string[] | null
+          name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          age: number
+          condition?: string | null
+          created_at?: string | null
+          gender: string
+          id?: string
+          last_visit?: string | null
+          medical_history?: string[] | null
+          name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          age?: number
+          condition?: string | null
+          created_at?: string | null
+          gender?: string
+          id?: string
+          last_visit?: string | null
+          medical_history?: string[] | null
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

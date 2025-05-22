@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { FileText, Save, User, Stethoscope, Pill } from 'lucide-react';
+import { FileText, Save, User, Stethoscope, Pill, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   Form,
@@ -17,10 +17,12 @@ import {
   FormControl,
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
+import { saveMedicalRecord } from '@/services/dataService';
 
 interface NewNLPAnalysisProps {
   isOpen: boolean;
   onClose: () => void;
+  onSaved?: () => void;
 }
 
 interface StudentRecord {
@@ -32,7 +34,7 @@ interface StudentRecord {
   medication: string;
 }
 
-const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
+const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSaved }) => {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -79,7 +81,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
     }, 800);
   };
 
-  const handleSaveAnalysis = (data: StudentRecord) => {
+  const handleSaveAnalysis = async (data: StudentRecord) => {
     if (!data.studentName || !data.symptoms) {
       toast.error('Please enter student name and symptoms');
       return;
@@ -87,38 +89,95 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
 
     setIsSaving(true);
 
-    // Simulate saving to database
-    setTimeout(() => {
-      try {
-        // Create a saved record
-        const savedRecord = {
-          id: `record-${Date.now()}`,
-          date: new Date().toISOString(),
-          ...data,
-          // Store analysis result if available
-          result: analysisResult,
-        };
+    try {
+      // Create a new medical record
+      const newRecord = {
+        patient_name: data.studentName,
+        diagnosis: data.diagnosis,
+        doctor_notes: data.symptoms,
+        notes: data.medication,
+        severity: analysisResult?.severity || 5,
+        recommended_actions: []
+      };
 
-        // In a real app, we would save this to a database
-        // For now, let's save it to localStorage to simulate persistence
-        const savedAnalyses = JSON.parse(localStorage.getItem('savedAnalyses') || '[]');
-        savedAnalyses.push(savedRecord);
-        localStorage.setItem('savedAnalyses', JSON.stringify(savedAnalyses));
+      // Save to Supabase
+      await saveMedicalRecord(newRecord);
+      
+      // Also save to localStorage for compatibility with the saved analyses tab
+      const savedRecord = {
+        id: `record-${Date.now()}`,
+        date: new Date().toISOString(),
+        ...data,
+        // Store analysis result if available
+        result: analysisResult,
+      };
 
-        toast.success('Medical record saved successfully');
-        
-        // Dispatch custom event to notify other components
-        window.dispatchEvent(new Event('savedAnalysesUpdated'));
-        
-        // Close the modal after saving
-        handleClose();
-      } catch (error) {
-        toast.error('Error saving record');
-        console.error('Save error:', error);
-      } finally {
-        setIsSaving(false);
-      }
-    }, 500);
+      const savedAnalyses = JSON.parse(localStorage.getItem('savedAnalyses') || '[]');
+      savedAnalyses.push(savedRecord);
+      localStorage.setItem('savedAnalyses', JSON.stringify(savedAnalyses));
+
+      toast.success('Medical record saved successfully');
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('savedAnalysesUpdated'));
+      
+      if (onSaved) onSaved();
+      
+      // Close the modal after saving
+      handleClose();
+    } catch (error) {
+      toast.error('Error saving record');
+      console.error('Save error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDownloadAnalysis = () => {
+    const data = form.getValues();
+    
+    if (!data.symptoms.trim()) {
+      toast.error('Please enter symptoms to download');
+      return;
+    }
+    
+    // Create content for download
+    const content = `
+Student Medical Record
+----------------------
+Name: ${data.studentName}
+ID: ${data.studentId}
+Course/Year: ${data.courseYear}
+Date: ${new Date().toLocaleString()}
+
+Symptoms:
+${data.symptoms}
+
+Diagnosis:
+${data.diagnosis}
+
+Prescribed Medication:
+${data.medication}
+
+${analysisResult?.severity ? `Severity Assessment: ${analysisResult.severity}/10` : ''}
+
+${analysisResult?.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 ? 
+  `AI-Suggested Diagnoses:
+${analysisResult.suggestedDiagnosis.join(', ')}` : ''}
+    `;
+    
+    // Create a blob and download it
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `medical-record-${data.studentName || 'student'}-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success('Record downloaded successfully');
   };
 
   const handleClose = () => {
@@ -332,7 +391,12 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
                         <p className="text-sm mb-1">Suggested Diagnoses:</p>
                         <div className="flex flex-wrap gap-1">
                           {analysisResult.suggestedDiagnosis.map((diagnosis: string, i: number) => (
-                            <Badge key={i} variant="outline" className="bg-medical-primary/5">
+                            <Badge 
+                              key={i} 
+                              variant="outline" 
+                              className="bg-medical-primary/5 cursor-pointer"
+                              onClick={() => form.setValue('diagnosis', diagnosis)}
+                            >
                               {diagnosis}
                             </Badge>
                           ))}
@@ -391,6 +455,15 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
               
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>
+                <Button 
+                  variant="outline"
+                  type="button"
+                  onClick={handleDownloadAnalysis}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download</span>
+                </Button>
                 <Button 
                   type="submit"
                   disabled={isSaving || !form.getValues('studentName')}
