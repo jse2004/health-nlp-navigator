@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MedicalRecord } from '@/data/sampleData';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
@@ -111,7 +112,7 @@ Medical Record
 --------------
 Record ID: ${editedRecord.id}
 Date: ${editedRecord.date}
-Patient: ${editedRecord.patientName}
+Patient: ${editedRecord.patient_name}
 
 Diagnosis: ${editedRecord.diagnosis}
 
