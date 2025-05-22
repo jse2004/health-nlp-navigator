@@ -6,19 +6,19 @@ export interface Patient {
   gender: 'Male' | 'Female' | 'Other';
   condition: string;
   status: 'Critical' | 'Warning' | 'Normal';
-  last_visit: string; // Changed from lastVisit to match DB
-  medical_history: string[]; // Changed from medicalHistory to match DB
+  last_visit: string; // Using snake_case for DB compatibility
+  medical_history: string[]; // Using snake_case for DB compatibility
 }
 
 export interface MedicalRecord {
   id: string;
-  patient_id: string; // Changed from patientId to match DB
+  patient_id: string; // Using snake_case for DB compatibility
   date: string;
-  doctor_notes: string; // Changed from doctorNotes to match DB
+  doctor_notes: string; // Using snake_case for DB compatibility
   diagnosis: string;
-  recommended_actions: string[]; // Changed from recommendedActions to match DB
+  recommended_actions: string[]; // Using snake_case for DB compatibility
   severity: number;
-  patientName?: string;
+  patient_name?: string; // Using snake_case for DB compatibility
   notes?: string;
 }
 

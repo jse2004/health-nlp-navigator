@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -293,13 +292,6 @@ const Dashboard: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Medical Records</h2>
-              
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleViewAll} className="flex items-center gap-1">
-                  <ArrowUpRight className="h-4 w-4" />
-                  <span>View All Records</span>
-                </Button>
-              </div>
             </div>
             
             <div className="overflow-x-auto">

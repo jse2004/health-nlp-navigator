@@ -58,7 +58,7 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
   };
   
   // Make sure date is an ISO string
-  if (recordData.date instanceof Date) {
+  if (recordData.date && typeof recordData.date === 'object' && 'toISOString' in recordData.date) {
     dataToSave.date = recordData.date.toISOString();
   }
 
