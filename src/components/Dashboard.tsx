@@ -417,13 +417,13 @@ const Dashboard: React.FC = () => {
                               // Convert saved analysis to medical record format for editing
                               const recordToEdit = {
                                 id: analysis.id,
-                                patientId: analysis.studentId || '',
-                                patientName: analysis.studentName || '',
+                                patient_id: analysis.studentId || '',
+                                patient_name: analysis.studentName || '',
                                 date: analysis.date,
                                 diagnosis: analysis.diagnosis || '',
                                 severity: analysis.result?.severity || analysis.nlpResult?.severity || 5,
-                                doctorNotes: analysis.symptoms || analysis.text || '',
-                                recommendedActions: []
+                                doctor_notes: analysis.symptoms || analysis.text || '',
+                                recommended_actions: []
                               };
                               setSelectedRecord(recordToEdit as MedicalRecord);
                               setIsAnalysisOpen(true);

@@ -53,7 +53,7 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
       </CardContent>
       <CardFooter className="border-t p-3 bg-gray-50 flex justify-between items-center">
         <span className="text-xs text-gray-500">
-          Last visit: {patient.lastVisit}
+          Last visit: {patient.last_visit}
         </span>
         <Button 
           variant="ghost" 
