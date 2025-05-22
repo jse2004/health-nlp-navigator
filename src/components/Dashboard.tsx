@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download } from 'lucide-react';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -17,6 +18,7 @@ const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
+  const [isViewAllOpen, setIsViewAllOpen] = useState(false);
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
@@ -145,6 +147,50 @@ const Dashboard: React.FC = () => {
     setSearchQuery(query);
   };
 
+  // Function to download all records as Excel
+  const downloadAllRecords = () => {
+    try {
+      // Create CSV content
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      // Add headers
+      csvContent += "ID,Date,Patient Name,Severity,Diagnosis,Doctor Notes\n";
+      
+      // Add rows
+      medicalRecords.forEach(record => {
+        const row = [
+          record.id,
+          new Date(record.date || '').toLocaleDateString(),
+          record.patient_name || "Unknown",
+          record.severity || 0,
+          record.diagnosis || "No diagnosis",
+          (record.doctor_notes || "").replace(/,/g, ";") // Replace commas to prevent CSV issues
+        ];
+        csvContent += row.join(",") + "\n";
+      });
+      
+      // Create download link
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `medical_records_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      
+      // Trigger download
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("Records downloaded successfully");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download records");
+    }
+  };
+
+  const handleViewAll = () => {
+    setIsViewAllOpen(true);
+  };
+
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
@@ -184,7 +230,12 @@ const Dashboard: React.FC = () => {
             </TabsTrigger>
           </TabsList>
           
-          <Button variant="ghost" size="sm" className="text-medical-primary flex items-center gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-medical-primary flex items-center gap-1"
+            onClick={handleViewAll}
+          >
             <span>View All</span>
             <ArrowUpRight className="h-4 w-4" />
           </Button>
@@ -242,10 +293,13 @@ const Dashboard: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Medical Records</h2>
-              <Button variant="outline" size="sm" onClick={handleNewAnalysis}>
-                <FileText className="h-4 w-4 mr-1" />
-                <span>New Record</span>
-              </Button>
+              
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleViewAll} className="flex items-center gap-1">
+                  <ArrowUpRight className="h-4 w-4" />
+                  <span>View All Records</span>
+                </Button>
+              </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -273,7 +327,7 @@ const Dashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {medicalRecords.map((record) => (
+                    {medicalRecords.slice(0, 5).map((record) => (
                       <tr key={record.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {record.id?.substring(0, 8)}...
@@ -282,7 +336,7 @@ const Dashboard: React.FC = () => {
                           {new Date(record.date || '').toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {record.patientName || "Student Record"}
+                          {record.patient_name || "Student Record"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -336,6 +390,18 @@ const Dashboard: React.FC = () => {
                   </Button>
                 </div>
               )}
+              
+              {medicalRecords.length > 5 && (
+                <div className="mt-4 text-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleViewAll}
+                  >
+                    View All Records
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </TabsContent>
@@ -344,10 +410,6 @@ const Dashboard: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Saved Medical Records</h2>
-              <Button variant="outline" size="sm" onClick={handleNewAnalysis}>
-                <FileText className="h-4 w-4 mr-1" />
-                <span>New Record</span>
-              </Button>
             </div>
             
             {savedAnalyses.length === 0 ? (
@@ -462,6 +524,132 @@ const Dashboard: React.FC = () => {
         onClose={() => setIsNewAnalysisOpen(false)}
         onSaved={loadData}
       />
+      
+      {/* View All Records Modal */}
+      {isViewAllOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white w-11/12 max-w-6xl h-5/6 rounded-lg p-6 overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">All Medical Records</h2>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={downloadAllRecords}
+                  className="flex items-center gap-1"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download All</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setIsViewAllOpen(false)}
+                  className="text-destructive"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+            
+            <div className="overflow-auto flex-grow">
+              {medicalRecords.length > 0 ? (
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Record ID
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Student Name
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Diagnosis
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Severity
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {medicalRecords.map((record) => (
+                      <tr key={record.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {record.id?.substring(0, 8)}...
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(record.date || '').toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.patient_name || "Student Record"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                          {record.diagnosis || "No diagnosis"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="h-2 w-16 bg-gray-200 rounded-full">
+                              <div 
+                                className={`h-full rounded-full ${
+                                  record.severity >= 8 ? 'bg-medical-critical' : 
+                                  record.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
+                                }`}
+                                style={{ width: `${((record.severity || 0) / 10) * 100}%` }}
+                              />
+                            </div>
+                            <span className="ml-2 text-xs text-gray-500">{record.severity || 0}/10</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-medical-primary mr-2"
+                            onClick={() => {
+                              setSelectedRecord(record);
+                              setIsAnalysisOpen(true);
+                              setIsViewAllOpen(false);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => {
+                              handleDeleteAnalysis(record.id);
+                              if (medicalRecords.length === 1) {
+                                setIsViewAllOpen(false);
+                              }
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-10">
+                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-700">No medical records found</h3>
+                  <p className="text-gray-500 max-w-sm mx-auto">
+                    Create a new medical record to get started.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

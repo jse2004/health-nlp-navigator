@@ -51,11 +51,22 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
   const { id, ...recordData } = record;
   let result;
 
+  // Convert Date objects to ISO strings
+  const dataToSave = {
+    ...recordData,
+    updated_at: new Date().toISOString()
+  };
+  
+  // Make sure date is an ISO string
+  if (recordData.date instanceof Date) {
+    dataToSave.date = recordData.date.toISOString();
+  }
+
   if (id) {
     // Update existing record
     const { data, error } = await supabase
       .from('medical_records')
-      .update({ ...recordData, updated_at: new Date().toISOString() })
+      .update(dataToSave)
       .eq('id', id)
       .select()
       .single();
@@ -70,7 +81,7 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     // Insert new record
     const { data, error } = await supabase
       .from('medical_records')
-      .insert([{ ...recordData }])
+      .insert([{ ...dataToSave }])
       .select()
       .single();
     
@@ -89,9 +100,12 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
 export const savePatient = async (patient: Partial<Patient>): Promise<Patient> => {
   const { id, ...patientData } = patient;
   
-  // Map from frontend property names to database column names if needed
+  // Map frontend property names to database column names
   const dbPatient: any = {
-    ...patientData
+    ...patientData,
+    // Handle specific field mappings if needed
+    last_visit: patientData.last_visit,
+    medical_history: patientData.medical_history
   };
   
   let result;
