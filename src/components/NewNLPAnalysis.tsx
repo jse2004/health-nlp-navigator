@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { FileText, Save, User, Stethoscope, Pill, Download } from 'lucide-react';
+import { FileText, Save, User, Stethoscope, Pill } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   Form,
@@ -90,32 +89,21 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
     setIsSaving(true);
 
     try {
-      // Create a new medical record
+      // Create a new medical record with proper fields to match the database schema
       const newRecord = {
         patient_name: data.studentName,
+        patient_id: data.studentId || undefined, // Connect to patients table if ID exists
         diagnosis: data.diagnosis,
         doctor_notes: data.symptoms,
         notes: data.medication,
         severity: analysisResult?.severity || 5,
+        date: new Date().toISOString(),
         recommended_actions: []
       };
 
       // Save to Supabase
       await saveMedicalRecord(newRecord);
       
-      // Also save to localStorage for compatibility with the saved analyses tab
-      const savedRecord = {
-        id: `record-${Date.now()}`,
-        date: new Date().toISOString(),
-        ...data,
-        // Store analysis result if available
-        result: analysisResult,
-      };
-
-      const savedAnalyses = JSON.parse(localStorage.getItem('savedAnalyses') || '[]');
-      savedAnalyses.push(savedRecord);
-      localStorage.setItem('savedAnalyses', JSON.stringify(savedAnalyses));
-
       toast.success('Medical record saved successfully');
       
       // Dispatch custom event to notify other components
@@ -455,15 +443,6 @@ ${analysisResult.suggestedDiagnosis.join(', ')}` : ''}
               
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>
-                <Button 
-                  variant="outline"
-                  type="button"
-                  onClick={handleDownloadAnalysis}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Download</span>
-                </Button>
                 <Button 
                   type="submit"
                   disabled={isSaving || !form.getValues('studentName')}
