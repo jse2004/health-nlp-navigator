@@ -29,8 +29,11 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
     return null;
   }
   
+  // Safely get doctor's notes ensuring we have a string
+  const doctorNotes = record.doctorNotes || record.notes || '';
+  
   // Analyze the doctor's notes using our NLP utility
-  const analysisResult = analyzeMedicalText(record.doctorNotes);
+  const analysisResult = analyzeMedicalText(doctorNotes);
   
   // Calculate severity level label
   const getSeverityLabel = (value: number) => {
@@ -79,7 +82,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p>{record.doctorNotes}</p>
+                  <p>{doctorNotes}</p>
                   
                   <div className="mt-4 flex justify-end">
                     <Button variant="outline" size="sm" className="flex items-center gap-1">
@@ -209,16 +212,20 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
-                    {record.recommendedActions.map((action, index) => (
-                      <li key={index} className="flex items-center gap-2">
-                        <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs text-medical-primary">{index + 1}</span>
-                        </div>
-                        <span className="text-sm">{action}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {record.recommendedActions && record.recommendedActions.length > 0 ? (
+                    <ul className="space-y-2">
+                      {record.recommendedActions.map((action, index) => (
+                        <li key={index} className="flex items-center gap-2">
+                          <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs text-medical-primary">{index + 1}</span>
+                          </div>
+                          <span className="text-sm">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500">No recommended actions</p>
+                  )}
                   
                   <div className="mt-6 flex justify-end space-x-2">
                     <Button variant="outline" size="sm" onClick={onClose}>

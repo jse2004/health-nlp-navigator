@@ -190,6 +190,7 @@ const Dashboard: React.FC = () => {
                         {record.date}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {/* Use optional chaining or provide a fallback for patientName */}
                         {record.patientName || "Student Record"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -309,10 +310,10 @@ const Dashboard: React.FC = () => {
                                 date: analysis.date,
                                 diagnosis: analysis.diagnosis || '',
                                 severity: analysis.result?.severity || analysis.nlpResult?.severity || 5,
-                                notes: analysis.symptoms || analysis.text || '',
-                                medication: analysis.medication || ''
+                                doctorNotes: analysis.symptoms || analysis.text || '',
+                                recommendedActions: []
                               };
-                              setSelectedRecord(recordToEdit);
+                              setSelectedRecord(recordToEdit as MedicalRecord);
                               setIsAnalysisOpen(true);
                             }}
                           >

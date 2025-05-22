@@ -24,24 +24,27 @@ interface NLPAnalysisResult {
 /**
  * Analyzes medical text to extract entities, sentiment and key information
  */
-export const analyzeMedicalText = (text: string): NLPAnalysisResult => {
+export const analyzeMedicalText = (text: string | undefined): NLPAnalysisResult => {
+  // Handle case where text is undefined or empty
+  const safeText = text || '';
+  
   // In a real application, this would call an NLP API
   // This is a mock implementation for demonstration purposes
   
   // Mock entity extraction
-  const entities = extractEntities(text);
+  const entities = extractEntities(safeText);
   
   // Mock sentiment analysis
-  const sentiment = analyzeSentiment(text);
+  const sentiment = analyzeSentiment(safeText);
   
   // Mock key phrase extraction
-  const keyPhrases = extractKeyPhrases(text);
+  const keyPhrases = extractKeyPhrases(safeText);
   
   // Mock diagnosis suggestions based on the text
-  const suggestedDiagnosis = suggestDiagnosis(text);
+  const suggestedDiagnosis = suggestDiagnosis(safeText);
   
   // Mock severity assessment
-  const severity = assessSeverity(text);
+  const severity = assessSeverity(safeText);
   
   return {
     entities,
