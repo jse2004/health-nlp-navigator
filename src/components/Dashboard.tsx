@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, MessageSquare, Save } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save } from 'lucide-react';
 import { patients, medicalRecords, analyticsSummary, insightData, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -59,7 +58,7 @@ const Dashboard: React.FC = () => {
 
   const handleNewAnalysis = () => {
     setIsNewAnalysisOpen(true);
-    toast.info("Starting new NLP analysis session");
+    toast.info("Creating new medical record");
   };
 
   const formatDate = (dateString: string) => {
@@ -96,8 +95,8 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-500">Analyze patient records with AI assistance</p>
         </div>
         <Button className="flex items-center gap-2" onClick={handleNewAnalysis}>
-          <BrainCircuit className="h-4 w-4" />
-          <span>New NLP Analysis</span>
+          <FileText className="h-4 w-4" />
+          <span>New Medical Record</span>
         </Button>
       </div>
 
@@ -120,11 +119,7 @@ const Dashboard: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="saved-analyses" className="flex items-center gap-1">
               <Save className="h-4 w-4" />
-              <span>Saved Analyses</span>
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="flex items-center gap-1">
-              <MessageSquare className="h-4 w-4" />
-              <span>Messages</span>
+              <span>Saved Records</span>
             </TabsTrigger>
           </TabsList>
           
@@ -158,7 +153,7 @@ const Dashboard: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Recent Medical Records</h2>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleNewAnalysis}>
                 <FileText className="h-4 w-4 mr-1" />
                 <span>New Record</span>
               </Button>
@@ -175,7 +170,7 @@ const Dashboard: React.FC = () => {
                       Date
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Diagnosis
+                      Student Name
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Severity
@@ -195,7 +190,7 @@ const Dashboard: React.FC = () => {
                         {record.date}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {record.diagnosis}
+                        {record.patientName || "Student Record"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -221,7 +216,7 @@ const Dashboard: React.FC = () => {
                             setIsAnalysisOpen(true);
                           }}
                         >
-                          Analyze
+                          Edit
                         </Button>
                       </td>
                     </tr>
@@ -235,19 +230,19 @@ const Dashboard: React.FC = () => {
         <TabsContent value="saved-analyses" className="mt-0">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Saved NLP Analyses</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Saved Medical Records</h2>
               <Button variant="outline" size="sm" onClick={handleNewAnalysis}>
-                <BrainCircuit className="h-4 w-4 mr-1" />
-                <span>New Analysis</span>
+                <FileText className="h-4 w-4 mr-1" />
+                <span>New Record</span>
               </Button>
             </div>
             
             {savedAnalyses.length === 0 ? (
               <div className="text-center py-10">
                 <Save className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-gray-700">No saved analyses yet</h3>
+                <h3 className="text-lg font-medium text-gray-700">No saved records yet</h3>
                 <p className="text-gray-500 max-w-sm mx-auto">
-                  Create a new analysis using the "New NLP Analysis" button and save it to view it here.
+                  Create a new medical record using the "New Medical Record" button and save it to view it here.
                 </p>
               </div>
             ) : (
@@ -259,10 +254,10 @@ const Dashboard: React.FC = () => {
                         Date
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Text Sample
+                        Student Name
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Diagnoses
+                        Symptoms
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Severity
@@ -278,42 +273,51 @@ const Dashboard: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(analysis.date)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
-                          {analysis.text.substring(0, 100)}{analysis.text.length > 100 ? '...' : ''}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {analysis.studentName || "Student"}
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {analysis.result.suggestedDiagnosis && 
-                              analysis.result.suggestedDiagnosis.slice(0, 2).map((diagnosis: string, i: number) => (
-                              <Badge key={i} variant="outline" className="bg-medical-primary/5">
-                                {diagnosis}
-                              </Badge>
-                            ))}
-                            {analysis.result.suggestedDiagnosis && 
-                              analysis.result.suggestedDiagnosis.length > 2 && (
-                              <Badge variant="outline" className="bg-gray-50">
-                                +{analysis.result.suggestedDiagnosis.length - 2} more
-                              </Badge>
-                            )}
-                          </div>
+                        <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                          {analysis.symptoms?.substring(0, 100) || analysis.text?.substring(0, 100)}{(analysis.symptoms?.length > 100 || analysis.text?.length > 100) ? '...' : ''}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {analysis.result.severity && (
+                          {(analysis.result?.severity || analysis.nlpResult?.severity) && (
                             <div className="flex items-center">
                               <div className="h-2 w-16 bg-gray-200 rounded-full">
                                 <div 
                                   className={`h-full rounded-full ${
-                                    analysis.result.severity >= 8 ? 'bg-medical-critical' : 
-                                    analysis.result.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
+                                    (analysis.result?.severity || analysis.nlpResult?.severity) >= 8 ? 'bg-medical-critical' : 
+                                    (analysis.result?.severity || analysis.nlpResult?.severity) >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
                                   }`}
-                                  style={{ width: `${(analysis.result.severity / 10) * 100}%` }}
+                                  style={{ width: `${((analysis.result?.severity || analysis.nlpResult?.severity) / 10) * 100}%` }}
                                 />
                               </div>
-                              <span className="ml-2 text-xs text-gray-500">{analysis.result.severity}/10</span>
+                              <span className="ml-2 text-xs text-gray-500">{analysis.result?.severity || analysis.nlpResult?.severity}/10</span>
                             </div>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-medical-primary mr-2"
+                            onClick={() => {
+                              // Convert saved analysis to medical record format for editing
+                              const recordToEdit = {
+                                id: analysis.id,
+                                patientId: analysis.studentId || '',
+                                patientName: analysis.studentName || '',
+                                date: analysis.date,
+                                diagnosis: analysis.diagnosis || '',
+                                severity: analysis.result?.severity || analysis.nlpResult?.severity || 5,
+                                notes: analysis.symptoms || analysis.text || '',
+                                medication: analysis.medication || ''
+                              };
+                              setSelectedRecord(recordToEdit);
+                              setIsAnalysisOpen(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="sm"
@@ -329,16 +333,6 @@ const Dashboard: React.FC = () => {
                 </table>
               </div>
             )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="messages" className="mt-0">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center justify-center h-64">
-            <div className="text-center">
-              <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-700">No new messages</h3>
-              <p className="text-gray-500 max-w-sm">You're all caught up! New messages from healthcare providers will appear here.</p>
-            </div>
           </div>
         </TabsContent>
       </Tabs>

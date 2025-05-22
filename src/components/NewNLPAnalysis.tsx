@@ -7,17 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { BrainCircuit, FileText, Save, User, Stethoscope, Pill } from 'lucide-react';
+import { FileText, Save, User, Stethoscope, Pill } from 'lucide-react';
 import { toast } from 'sonner';
-import { Label } from '@/components/ui/label';
 import { 
   Form,
   FormField,
   FormItem,
   FormLabel,
   FormControl,
-  FormDescription,
-  FormMessage
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 
@@ -83,8 +80,8 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSaveAnalysis = (data: StudentRecord) => {
-    if (!analysisResult) {
-      toast.error('Please analyze symptoms first');
+    if (!data.studentName || !data.symptoms) {
+      toast.error('Please enter student name and symptoms');
       return;
     }
 
@@ -98,16 +95,20 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
           id: `record-${Date.now()}`,
           date: new Date().toISOString(),
           ...data,
-          nlpResult: analysisResult,
+          // Store analysis result if available
+          result: analysisResult,
         };
 
         // In a real app, we would save this to a database
         // For now, let's save it to localStorage to simulate persistence
-        const savedRecords = JSON.parse(localStorage.getItem('savedRecords') || '[]');
-        savedRecords.push(savedRecord);
-        localStorage.setItem('savedRecords', JSON.stringify(savedRecords));
+        const savedAnalyses = JSON.parse(localStorage.getItem('savedAnalyses') || '[]');
+        savedAnalyses.push(savedRecord);
+        localStorage.setItem('savedAnalyses', JSON.stringify(savedAnalyses));
 
-        toast.success('Student clinic record saved successfully');
+        toast.success('Medical record saved successfully');
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new Event('savedAnalysesUpdated'));
         
         // Close the modal after saving
         handleClose();
@@ -132,7 +133,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
         <SheetHeader className="border-b pb-4">
           <SheetTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            New Student Clinic Record
+            New Medical Record
           </SheetTitle>
         </SheetHeader>
         
@@ -194,7 +195,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <BrainCircuit className="h-4 w-4" />
+                      <FileText className="h-4 w-4" />
                       Symptoms
                     </CardTitle>
                   </CardHeader>
@@ -226,7 +227,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose }) => {
                           <>Analyzing<span className="animate-pulse">...</span></>
                         ) : (
                           <>
-                            <BrainCircuit className="h-4 w-4" />
+                            <FileText className="h-4 w-4" />
                             <span>Analyze Symptoms</span>
                           </>
                         )}
