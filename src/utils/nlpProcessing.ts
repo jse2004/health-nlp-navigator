@@ -59,6 +59,8 @@ export const analyzeMedicalText = (text: string | undefined): NLPAnalysisResult 
 const extractEntities = (text: string): NLPEntity[] => {
   const entities: NLPEntity[] = [];
   
+  if (!text) return entities; // Return empty array if text is empty
+  
   // These would normally be identified by an NLP model
   const medicalTerms = [
     { term: "headache", type: "symptom" },
@@ -86,7 +88,7 @@ const extractEntities = (text: string): NLPEntity[] => {
   ];
   
   medicalTerms.forEach(term => {
-    if (text.toLowerCase().includes(term.term)) {
+    if (term.term && text.toLowerCase().includes(term.term)) {
       // Find the actual case used in the text
       const regex = new RegExp(term.term, "i");
       const match = text.match(regex);

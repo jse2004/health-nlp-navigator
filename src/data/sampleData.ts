@@ -1,4 +1,3 @@
-
 // Types for our data
 export interface Patient {
   id: string;
@@ -19,6 +18,8 @@ export interface MedicalRecord {
   diagnosis: string;
   recommendedActions: string[];
   severity: number;
+  patientName?: string; // Added missing property
+  notes?: string; // Added missing property
 }
 
 export interface AnalyticsSummary {
