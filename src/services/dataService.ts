@@ -58,9 +58,10 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
   
   // Make sure date is an ISO string with proper null checks
   if (recordData.date) {
-    // Check if it's a Date object
-    if (typeof recordData.date === 'object' && recordData.date instanceof Date) {
-      dataToSave.date = recordData.date.toISOString();
+    // Check if it's a Date object by testing for the toISOString method
+    if (typeof recordData.date === 'object' && recordData.date !== null && 
+        typeof (recordData.date as Date).toISOString === 'function') {
+      dataToSave.date = (recordData.date as Date).toISOString();
     }
     // If it's already a string, keep it as is
   }
