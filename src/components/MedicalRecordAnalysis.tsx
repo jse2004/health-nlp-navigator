@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MedicalRecord } from '@/data/sampleData';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
@@ -41,7 +40,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
       setEditedRecord({ ...record });
       
       // Analyze the doctor's notes using our NLP utility
-      const doctorNotes = record.doctorNotes || record.notes || '';
+      const doctorNotes = record.doctor_notes || record.notes || '';
       const result = analyzeMedicalText(doctorNotes);
       setAnalysisResult(result);
     }
@@ -77,22 +76,22 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
 
   // Handle recommended action change
   const handleActionChange = (index: number, value: string) => {
-    const updatedActions = [...(editedRecord.recommendedActions || [])];
+    const updatedActions = [...(editedRecord.recommended_actions || [])];
     updatedActions[index] = value;
-    handleInputChange('recommendedActions', updatedActions);
+    handleInputChange('recommended_actions', updatedActions);
   };
 
   // Add a new recommended action
   const addRecommendedAction = () => {
-    const updatedActions = [...(editedRecord.recommendedActions || []), ''];
-    handleInputChange('recommendedActions', updatedActions);
+    const updatedActions = [...(editedRecord.recommended_actions || []), ''];
+    handleInputChange('recommended_actions', updatedActions);
   };
 
   // Remove a recommended action
   const removeRecommendedAction = (index: number) => {
-    const updatedActions = [...(editedRecord.recommendedActions || [])];
+    const updatedActions = [...(editedRecord.recommended_actions || [])];
     updatedActions.splice(index, 1);
-    handleInputChange('recommendedActions', updatedActions);
+    handleInputChange('recommended_actions', updatedActions);
   };
 
   // Calculate severity level label
@@ -117,12 +116,12 @@ Patient: ${editedRecord.patientName}
 Diagnosis: ${editedRecord.diagnosis}
 
 Doctor's Notes:
-${editedRecord.doctorNotes || editedRecord.notes}
+${editedRecord.doctor_notes || editedRecord.notes}
 
 Severity: ${editedRecord.severity}/10
 
 Recommended Actions:
-${(editedRecord.recommendedActions || []).map((action, i) => `${i + 1}. ${action}`).join('\n')}
+${(editedRecord.recommended_actions || []).map((action, i) => `${i + 1}. ${action}`).join('\n')}
     `;
     
     // Create a blob and download it
@@ -245,10 +244,10 @@ ${(editedRecord.recommendedActions || []).map((action, i) => `${i + 1}. ${action
                 <CardContent className="text-sm">
                   {isEditing ? (
                     <Textarea
-                      value={editedRecord.doctorNotes || editedRecord.notes || ''}
+                      value={editedRecord.doctor_notes || editedRecord.notes || ''}
                       onChange={(e) => {
                         const notes = e.target.value;
-                        handleInputChange('doctorNotes', notes);
+                        handleInputChange('doctor_notes', notes);
                         // Re-analyze the text
                         const result = analyzeMedicalText(notes);
                         setAnalysisResult(result);
@@ -257,7 +256,7 @@ ${(editedRecord.recommendedActions || []).map((action, i) => `${i + 1}. ${action
                       placeholder="Enter doctor's notes"
                     />
                   ) : (
-                    <p>{editedRecord.doctorNotes || editedRecord.notes || ''}</p>
+                    <p>{editedRecord.doctor_notes || editedRecord.notes || ''}</p>
                   )}
                   
                   <div className="mt-4 flex justify-end">
@@ -266,7 +265,7 @@ ${(editedRecord.recommendedActions || []).map((action, i) => `${i + 1}. ${action
                       size="sm" 
                       className="flex items-center gap-1"
                       onClick={() => {
-                        navigator.clipboard.writeText(editedRecord.doctorNotes || editedRecord.notes || '');
+                        navigator.clipboard.writeText(editedRecord.doctor_notes || editedRecord.notes || '');
                         toast.success('Copied to clipboard');
                       }}
                     >
@@ -412,7 +411,7 @@ ${(editedRecord.recommendedActions || []).map((action, i) => `${i + 1}. ${action
                 <CardContent>
                   {isEditing ? (
                     <div className="space-y-3">
-                      {(editedRecord.recommendedActions || []).map((action, index) => (
+                      {(editedRecord.recommended_actions || []).map((action, index) => (
                         <div key={index} className="flex items-center gap-2">
                           <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
                             <span className="text-xs text-medical-primary">{index + 1}</span>
@@ -443,9 +442,9 @@ ${(editedRecord.recommendedActions || []).map((action, i) => `${i + 1}. ${action
                       </Button>
                     </div>
                   ) : (
-                    editedRecord.recommendedActions && editedRecord.recommendedActions.length > 0 ? (
+                    editedRecord.recommended_actions && editedRecord.recommended_actions.length > 0 ? (
                       <ul className="space-y-2">
-                        {editedRecord.recommendedActions.map((action, index) => (
+                        {editedRecord.recommended_actions.map((action, index) => (
                           <li key={index} className="flex items-center gap-2">
                             <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
                               <span className="text-xs text-medical-primary">{index + 1}</span>

@@ -6,20 +6,20 @@ export interface Patient {
   gender: 'Male' | 'Female' | 'Other';
   condition: string;
   status: 'Critical' | 'Warning' | 'Normal';
-  lastVisit: string;
-  medicalHistory: string[];
+  last_visit: string; // Changed from lastVisit to match DB
+  medical_history: string[]; // Changed from medicalHistory to match DB
 }
 
 export interface MedicalRecord {
   id: string;
-  patientId: string;
+  patient_id: string; // Changed from patientId to match DB
   date: string;
-  doctorNotes: string;
+  doctor_notes: string; // Changed from doctorNotes to match DB
   diagnosis: string;
-  recommendedActions: string[];
+  recommended_actions: string[]; // Changed from recommendedActions to match DB
   severity: number;
-  patientName?: string; // Added missing property
-  notes?: string; // Added missing property
+  patientName?: string;
+  notes?: string;
 }
 
 export interface AnalyticsSummary {
@@ -38,8 +38,8 @@ export const patients: Patient[] = [
     gender: "Male",
     condition: "Hypertension",
     status: "Warning",
-    lastVisit: "2023-04-15",
-    medicalHistory: ["Diabetes Type 2", "Appendectomy (2015)"]
+    last_visit: "2023-04-15",
+    medical_history: ["Diabetes Type 2", "Appendectomy (2015)"]
   },
   {
     id: "P002",
@@ -48,8 +48,8 @@ export const patients: Patient[] = [
     gender: "Female",
     condition: "Pregnancy - 3rd Trimester",
     status: "Normal",
-    lastVisit: "2023-05-02",
-    medicalHistory: ["Asthma", "Tonsillectomy (2010)"]
+    last_visit: "2023-05-02",
+    medical_history: ["Asthma", "Tonsillectomy (2010)"]
   },
   {
     id: "P003",
@@ -58,8 +58,8 @@ export const patients: Patient[] = [
     gender: "Male",
     condition: "Post-Stroke Recovery",
     status: "Critical",
-    lastVisit: "2023-05-10",
-    medicalHistory: ["Stroke (2023)", "Heart Arrhythmia", "Hypertension"]
+    last_visit: "2023-05-10",
+    medical_history: ["Stroke (2023)", "Heart Arrhythmia", "Hypertension"]
   },
   {
     id: "P004",
@@ -68,8 +68,8 @@ export const patients: Patient[] = [
     gender: "Female",
     condition: "Migraine",
     status: "Normal",
-    lastVisit: "2023-04-28",
-    medicalHistory: ["Vitamin D Deficiency"]
+    last_visit: "2023-04-28",
+    medical_history: ["Vitamin D Deficiency"]
   },
   {
     id: "P005",
@@ -78,8 +78,8 @@ export const patients: Patient[] = [
     gender: "Male",
     condition: "Coronary Artery Disease",
     status: "Warning",
-    lastVisit: "2023-05-05",
-    medicalHistory: ["Myocardial Infarction (2020)", "Hypercholesterolemia", "Obesity"]
+    last_visit: "2023-05-05",
+    medical_history: ["Myocardial Infarction (2020)", "Hypercholesterolemia", "Obesity"]
   }
 ];
 
@@ -87,11 +87,11 @@ export const patients: Patient[] = [
 export const medicalRecords: MedicalRecord[] = [
   {
     id: "MR001",
-    patientId: "P001",
+    patient_id: "P001",
     date: "2023-04-15",
-    doctorNotes: "Patient presents with elevated blood pressure (150/95 mmHg). Reports occasional headaches and dizziness. Current medication appears to be insufficiently managing hypertension. Recommended adjustment to dosage and follow-up in two weeks.",
+    doctor_notes: "Patient presents with elevated blood pressure (150/95 mmHg). Reports occasional headaches and dizziness. Current medication appears to be insufficiently managing hypertension. Recommended adjustment to dosage and follow-up in two weeks.",
     diagnosis: "Uncontrolled Hypertension",
-    recommendedActions: [
+    recommended_actions: [
       "Increase lisinopril to 20mg daily",
       "Daily blood pressure monitoring",
       "Reduce sodium intake",
@@ -101,11 +101,11 @@ export const medicalRecords: MedicalRecord[] = [
   },
   {
     id: "MR002",
-    patientId: "P002",
+    patient_id: "P002",
     date: "2023-05-02",
-    doctorNotes: "Routine prenatal checkup at 34 weeks. Fetal heartbeat normal at 140 bpm. Mother reports mild lower back pain but no contractions. Blood pressure within normal range at 118/75 mmHg. Fetal position is head down, preparing for birth.",
+    doctor_notes: "Routine prenatal checkup at 34 weeks. Fetal heartbeat normal at 140 bpm. Mother reports mild lower back pain but no contractions. Blood pressure within normal range at 118/75 mmHg. Fetal position is head down, preparing for birth.",
     diagnosis: "Normal Pregnancy Progression",
-    recommendedActions: [
+    recommended_actions: [
       "Continue prenatal vitamins",
       "Mild exercise recommended",
       "Next appointment in 1 week"
@@ -114,11 +114,11 @@ export const medicalRecords: MedicalRecord[] = [
   },
   {
     id: "MR003",
-    patientId: "P003",
+    patient_id: "P003",
     date: "2023-05-10",
-    doctorNotes: "Patient recovering from ischemic stroke 3 weeks ago. Presenting with right-sided weakness, particularly in the upper extremity. Speech is slightly slurred but comprehension intact. Patient reports difficulty with fine motor tasks. Blood pressure elevated at 160/95 mmHg despite medication.",
+    doctor_notes: "Patient recovering from ischemic stroke 3 weeks ago. Presenting with right-sided weakness, particularly in the upper extremity. Speech is slightly slurred but comprehension intact. Patient reports difficulty with fine motor tasks. Blood pressure elevated at 160/95 mmHg despite medication.",
     diagnosis: "Post-stroke Recovery with Residual Hemiparesis",
-    recommendedActions: [
+    recommended_actions: [
       "Urgent adjustment to anti-hypertensive medication",
       "Physical therapy 3x weekly",
       "Speech therapy evaluation",
@@ -128,11 +128,11 @@ export const medicalRecords: MedicalRecord[] = [
   },
   {
     id: "MR004",
-    patientId: "P004",
+    patient_id: "P004",
     date: "2023-04-28",
-    doctorNotes: "Patient with recurring migraines, 2-3 episodes per week. Reports visual aura preceding headaches. Pain primarily on right side of head with nausea. Current prophylactic treatment showing minimal effectiveness. Sleep pattern irregular due to work schedule.",
+    doctor_notes: "Patient with recurring migraines, 2-3 episodes per week. Reports visual aura preceding headaches. Pain primarily on right side of head with nausea. Current prophylactic treatment showing minimal effectiveness. Sleep pattern irregular due to work schedule.",
     diagnosis: "Chronic Migraine with Aura",
-    recommendedActions: [
+    recommended_actions: [
       "Start topiramate 25mg daily, increasing to 50mg after 1 week",
       "Keep migraine diary",
       "Improve sleep hygiene",
@@ -142,11 +142,11 @@ export const medicalRecords: MedicalRecord[] = [
   },
   {
     id: "MR005",
-    patientId: "P005",
+    patient_id: "P005",
     date: "2023-05-05",
-    doctorNotes: "Follow-up after recent abnormal stress test. Patient reports chest discomfort with moderate exertion. ECG shows ST-segment depression in leads V3-V5. Recent lipid panel indicates LDL at 145 mg/dL despite statin therapy. BMI currently at 31.5.",
+    doctor_notes: "Follow-up after recent abnormal stress test. Patient reports chest discomfort with moderate exertion. ECG shows ST-segment depression in leads V3-V5. Recent lipid panel indicates LDL at 145 mg/dL despite statin therapy. BMI currently at 31.5.",
     diagnosis: "Worsening Coronary Artery Disease",
-    recommendedActions: [
+    recommended_actions: [
       "Increase atorvastatin to 40mg daily",
       "Cardiology referral for possible angiography",
       "Dietary consultation for weight management",

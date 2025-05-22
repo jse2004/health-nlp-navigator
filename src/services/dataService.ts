@@ -19,7 +19,7 @@ export const fetchPatients = async (searchQuery?: string): Promise<Patient[]> =>
     throw error;
   }
   
-  return data || [];
+  return data as Patient[] || [];
 };
 
 // Fetch medical records from Supabase
@@ -43,7 +43,7 @@ export const fetchMedicalRecords = async (searchQuery?: string, patientId?: stri
     throw error;
   }
   
-  return data || [];
+  return data as MedicalRecord[] || [];
 };
 
 // Save or update a medical record
@@ -55,7 +55,7 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     // Update existing record
     const { data, error } = await supabase
       .from('medical_records')
-      .update({ ...recordData, updated_at: new Date() })
+      .update({ ...recordData, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
@@ -82,19 +82,25 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     result = data;
   }
   
-  return result;
+  return result as MedicalRecord;
 };
 
 // Save or update a patient
 export const savePatient = async (patient: Partial<Patient>): Promise<Patient> => {
   const { id, ...patientData } = patient;
+  
+  // Map from frontend property names to database column names if needed
+  const dbPatient: any = {
+    ...patientData
+  };
+  
   let result;
 
   if (id) {
     // Update existing patient
     const { data, error } = await supabase
       .from('patients')
-      .update({ ...patientData, updated_at: new Date() })
+      .update({ ...dbPatient, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
@@ -106,10 +112,15 @@ export const savePatient = async (patient: Partial<Patient>): Promise<Patient> =
     
     result = data;
   } else {
+    // Make sure required fields are present
+    if (!dbPatient.name || !dbPatient.age || !dbPatient.gender) {
+      throw new Error('Missing required fields for patient');
+    }
+    
     // Insert new patient
     const { data, error } = await supabase
       .from('patients')
-      .insert([{ ...patientData }])
+      .insert([dbPatient])
       .select()
       .single();
     
@@ -121,7 +132,7 @@ export const savePatient = async (patient: Partial<Patient>): Promise<Patient> =
     result = data;
   }
   
-  return result;
+  return result as Patient;
 };
 
 // Delete a medical record
