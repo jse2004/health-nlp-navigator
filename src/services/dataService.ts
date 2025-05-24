@@ -115,14 +115,9 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     updated_at: new Date().toISOString()
   };
   
-  // Handle date conversion with proper null checking
+  // Handle date conversion - just convert to string if it exists
   if (recordData.date != null) {
-    if (recordData.date instanceof Date) {
-      dataToSave.date = recordData.date.toISOString();
-    } else {
-      // For string or other types, convert to string
-      dataToSave.date = String(recordData.date);
-    }
+    dataToSave.date = String(recordData.date);
   }
 
   if (id) {
