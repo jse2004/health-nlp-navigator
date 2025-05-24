@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 
@@ -116,15 +115,12 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     updated_at: new Date().toISOString()
   };
   
-  // Handle date conversion with proper type checking
-  if (recordData.date) {
-    // First check if it's an object before using instanceof
-    if (typeof recordData.date === 'object' && recordData.date !== null && recordData.date instanceof Date) {
+  // Handle date conversion with proper null checking
+  if (recordData.date != null) {
+    if (recordData.date instanceof Date) {
       dataToSave.date = recordData.date.toISOString();
-    } else if (typeof recordData.date === 'string') {
-      dataToSave.date = recordData.date;
     } else {
-      // For any other type, convert to string
+      // For string or other types, convert to string
       dataToSave.date = String(recordData.date);
     }
   }
