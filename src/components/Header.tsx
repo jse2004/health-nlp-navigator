@@ -1,9 +1,30 @@
 
 import React from 'react';
-import { BellDot, Search, User } from 'lucide-react';
+import { BellDot, Search, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Header: React.FC = () => {
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out of the system.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error signing out",
+        description: "There was a problem signing you out.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 py-4 px-6 flex justify-between items-center">
       <div className="flex items-center space-x-2">
@@ -31,10 +52,21 @@ const Header: React.FC = () => {
           <BellDot className="h-5 w-5" />
           <span className="absolute top-0 right-0 h-2 w-2 bg-medical-critical rounded-full"></span>
         </Button>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <User className="h-4 w-4" />
-          <span>Dr. Sarah Miller</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            <span>{user?.email || 'Admin'}</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSignOut}
+            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign Out</span>
+          </Button>
+        </div>
       </div>
     </header>
   );
