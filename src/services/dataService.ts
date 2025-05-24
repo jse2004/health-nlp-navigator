@@ -45,25 +45,87 @@ export const fetchMedicalRecords = async (searchQuery?: string, patientId?: stri
   return data as MedicalRecord[] || [];
 };
 
+// Helper function to find or create a patient
+const findOrCreatePatient = async (studentName: string, studentId?: string): Promise<string | null> => {
+  if (!studentName) return null;
+
+  try {
+    // First, try to find existing patient by name
+    let query = supabase
+      .from('patients')
+      .select('id')
+      .eq('name', studentName);
+
+    const { data: existingPatients, error: fetchError } = await query.limit(1);
+    
+    if (fetchError) {
+      console.error('Error fetching existing patient:', fetchError);
+      return null;
+    }
+
+    // If patient exists, return their ID
+    if (existingPatients && existingPatients.length > 0) {
+      return existingPatients[0].id;
+    }
+
+    // If patient doesn't exist, create a new one
+    const newPatient = {
+      name: studentName,
+      age: 20, // Default age for student
+      gender: 'Unknown', // Default gender
+      condition: 'Student Health Check',
+      status: 'Active',
+      last_visit: new Date().toISOString().split('T')[0], // Today's date
+      medical_history: []
+    };
+
+    const { data: createdPatient, error: createError } = await supabase
+      .from('patients')
+      .insert([newPatient])
+      .select('id')
+      .single();
+
+    if (createError) {
+      console.error('Error creating new patient:', createError);
+      return null;
+    }
+
+    return createdPatient.id;
+  } catch (error) {
+    console.error('Error in findOrCreatePatient:', error);
+    return null;
+  }
+};
+
 // Save or update a medical record
 export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise<MedicalRecord> => {
   const { id, ...recordData } = record;
   let result;
 
+  // Handle patient connection
+  let patientId = null;
+  if (recordData.patient_name) {
+    patientId = await findOrCreatePatient(recordData.patient_name);
+  }
+
   // Convert Date objects to ISO strings
   const dataToSave = {
     ...recordData,
+    patient_id: patientId, // Use the found/created patient ID
     updated_at: new Date().toISOString()
   };
   
   // Make sure date is an ISO string with proper null checks
   if (recordData.date) {
-    // Check if it's a Date object by testing for the toISOString method
-    if (typeof recordData.date === 'object' && recordData.date !== null && 
-        typeof (recordData.date as Date).toISOString === 'function') {
+    // Check if it's a Date object
+    if (recordData.date instanceof Date) {
+      dataToSave.date = recordData.date.toISOString();
+    } else if (typeof recordData.date === 'string') {
+      // If it's already a string, keep it as is
+      dataToSave.date = recordData.date;
+    } else if (recordData.date && typeof recordData.date === 'object' && 'toISOString' in recordData.date) {
       dataToSave.date = (recordData.date as Date).toISOString();
     }
-    // If it's already a string, keep it as is
   }
 
   if (id) {

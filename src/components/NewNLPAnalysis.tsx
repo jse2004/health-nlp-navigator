@@ -89,22 +89,27 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
     setIsSaving(true);
 
     try {
+      console.log('Saving medical record with data:', data);
+      
       // Create a new medical record with proper fields to match the database schema
       const newRecord = {
         patient_name: data.studentName,
-        patient_id: data.studentId || undefined, // Connect to patients table if ID exists
-        diagnosis: data.diagnosis,
+        diagnosis: data.diagnosis || 'No diagnosis provided',
         doctor_notes: data.symptoms,
-        notes: data.medication,
+        notes: data.medication || 'No medication prescribed',
         severity: analysisResult?.severity || 5,
         date: new Date().toISOString(),
-        recommended_actions: []
+        recommended_actions: analysisResult?.keyPhrases || []
       };
 
+      console.log('Prepared record for saving:', newRecord);
+
       // Save to Supabase
-      await saveMedicalRecord(newRecord);
+      const savedRecord = await saveMedicalRecord(newRecord);
       
-      toast.success('Medical record saved successfully');
+      console.log('Record saved successfully:', savedRecord);
+      
+      toast.success('Medical record saved successfully to database');
       
       // Dispatch custom event to notify other components
       window.dispatchEvent(new Event('savedAnalysesUpdated'));
@@ -114,58 +119,11 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
       // Close the modal after saving
       handleClose();
     } catch (error) {
-      toast.error('Error saving record');
       console.error('Save error:', error);
+      toast.error('Error saving record to database');
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleDownloadAnalysis = () => {
-    const data = form.getValues();
-    
-    if (!data.symptoms.trim()) {
-      toast.error('Please enter symptoms to download');
-      return;
-    }
-    
-    // Create content for download
-    const content = `
-Student Medical Record
-----------------------
-Name: ${data.studentName}
-ID: ${data.studentId}
-Course/Year: ${data.courseYear}
-Date: ${new Date().toLocaleString()}
-
-Symptoms:
-${data.symptoms}
-
-Diagnosis:
-${data.diagnosis}
-
-Prescribed Medication:
-${data.medication}
-
-${analysisResult?.severity ? `Severity Assessment: ${analysisResult.severity}/10` : ''}
-
-${analysisResult?.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 ? 
-  `AI-Suggested Diagnoses:
-${analysisResult.suggestedDiagnosis.join(', ')}` : ''}
-    `;
-    
-    // Create a blob and download it
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `medical-record-${data.studentName || 'student'}-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success('Record downloaded successfully');
   };
 
   const handleClose = () => {
