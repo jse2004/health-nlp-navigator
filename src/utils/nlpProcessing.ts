@@ -294,7 +294,7 @@ const suggestDiagnosis = (text: string): string[] => {
     {
       diagnosis: 'Hypertension',
       indicators: [
-        /elevated blood pressure|high blood pressure|bp.*1[4-9]\d\/[9-1]\d\d|systolic.*1[4-9]\d|diastolic.*9\d/i,
+        /elevated blood pressure|high blood pressure|bp.*1[4-9]\d\/[0-9]\d\d|systolic.*1[4-9]\d|diastolic.*9\d/i,
         /headache.*blood pressure|dizziness.*hypertension/i
       ],
       minMatches: 1
