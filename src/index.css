@@ -95,19 +95,48 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+
+  /* Improve dark mode text visibility */
+  .dark {
+    color-scheme: dark;
+  }
+
+  .dark * {
+    border-color: rgb(55 65 81 / 0.3);
+  }
+
+  .dark .text-gray-600 {
+    @apply text-gray-300;
+  }
+
+  .dark .text-gray-500 {
+    @apply text-gray-400;
+  }
+
+  .dark .text-gray-700 {
+    @apply text-gray-200;
+  }
+
+  .dark .text-gray-800 {
+    @apply text-gray-100;
+  }
+
+  .dark .text-gray-900 {
+    @apply text-white;
+  }
 }
 
 @layer components {
   .card-medical {
-    @apply bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden transition-all duration-200 hover:shadow-lg;
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-200 hover:shadow-lg;
   }
   
   .medical-stat {
-    @apply text-2xl font-semibold text-medical-primary;
+    @apply text-2xl font-semibold text-medical-primary dark:text-blue-400;
   }
   
   .medical-stat-label {
-    @apply text-sm font-medium text-medical-gray;
+    @apply text-sm font-medium text-gray-600 dark:text-gray-300;
   }
 
   .badge-status {
@@ -115,14 +144,35 @@
   }
   
   .badge-critical {
-    @apply badge-status bg-medical-critical/10 text-medical-critical;
+    @apply badge-status bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300;
   }
   
   .badge-warning {
-    @apply badge-status bg-medical-warning/10 text-medical-warning;
+    @apply badge-status bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300;
   }
   
   .badge-normal {
-    @apply badge-status bg-medical-success/10 text-medical-success;
+    @apply badge-status bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300;
+  }
+
+  /* Enhanced dark mode support for cards and components */
+  .dark .bg-white {
+    @apply bg-gray-800;
+  }
+
+  .dark .text-black {
+    @apply text-white;
+  }
+
+  .dark .border-gray-200 {
+    @apply border-gray-700;
+  }
+
+  .dark .hover\:bg-gray-50:hover {
+    @apply hover:bg-gray-800;
+  }
+
+  .dark .hover\:bg-gray-100:hover {
+    @apply hover:bg-gray-700;
   }
 }
