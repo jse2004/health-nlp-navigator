@@ -24,62 +24,91 @@ const generateUDMId = async (): Promise<string> => {
   }
 };
 
+// Generate patient ID
+const generatePatientId = async (): Promise<string> => {
+  try {
+    const { count, error } = await supabase
+      .from('patients')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('Error getting patient count:', error);
+      return `PAT${String(Math.floor(Math.random() * 1000) + 1).padStart(3, '0')}`;
+    }
+    
+    const nextNumber = (count || 0) + 1;
+    return `PAT${String(nextNumber).padStart(3, '0')}`;
+  } catch (error) {
+    console.error('Error generating patient ID:', error);
+    return `PAT${String(Math.floor(Math.random() * 1000) + 1).padStart(3, '0')}`;
+  }
+};
+
 // Fetch patients from Supabase
 export const fetchPatients = async (searchQuery?: string): Promise<Patient[]> => {
-  let query = supabase
-    .from('patients')
-    .select('*');
+  try {
+    let query = supabase
+      .from('patients')
+      .select('*');
 
-  if (searchQuery) {
-    query = query.or(`name.ilike.%${searchQuery}%,condition.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%`);
-  }
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,condition.ilike.%${searchQuery}%,status.ilike.%${searchQuery}%`);
+    }
 
-  const { data, error } = await query.order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching patients:', error);
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching patients:', error);
+      throw error;
+    }
+    
+    return data as Patient[] || [];
+  } catch (error) {
+    console.error('Error in fetchPatients:', error);
     throw error;
   }
-  
-  return data as Patient[] || [];
 };
 
 // Fetch medical records from Supabase
 export const fetchMedicalRecords = async (searchQuery?: string, patientId?: string): Promise<MedicalRecord[]> => {
-  let query = supabase
-    .from('medical_records')
-    .select('*');
+  try {
+    let query = supabase
+      .from('medical_records')
+      .select('*');
 
-  if (patientId) {
-    query = query.eq('patient_id', patientId);
-  }
+    if (patientId) {
+      query = query.eq('patient_id', patientId);
+    }
 
-  if (searchQuery) {
-    query = query.or(`patient_name.ilike.%${searchQuery}%,diagnosis.ilike.%${searchQuery}%,doctor_notes.ilike.%${searchQuery}%`);
-  }
+    if (searchQuery) {
+      query = query.or(`patient_name.ilike.%${searchQuery}%,diagnosis.ilike.%${searchQuery}%,doctor_notes.ilike.%${searchQuery}%`);
+    }
 
-  const { data, error } = await query.order('date', { ascending: false });
-  
-  if (error) {
-    console.error('Error fetching medical records:', error);
+    const { data, error } = await query.order('date', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching medical records:', error);
+      throw error;
+    }
+    
+    return data as MedicalRecord[] || [];
+  } catch (error) {
+    console.error('Error in fetchMedicalRecords:', error);
     throw error;
   }
-  
-  return data as MedicalRecord[] || [];
 };
 
 // Helper function to find or create a patient
-const findOrCreatePatient = async (studentName: string, studentId?: string): Promise<string | null> => {
+const findOrCreatePatient = async (studentName: string): Promise<string | null> => {
   if (!studentName) return null;
 
   try {
     // First, try to find existing patient by name
-    let query = supabase
+    const { data: existingPatients, error: fetchError } = await supabase
       .from('patients')
       .select('id')
-      .eq('name', studentName);
-
-    const { data: existingPatients, error: fetchError } = await query.limit(1);
+      .eq('name', studentName)
+      .limit(1);
     
     if (fetchError) {
       console.error('Error fetching existing patient:', fetchError);
@@ -92,7 +121,9 @@ const findOrCreatePatient = async (studentName: string, studentId?: string): Pro
     }
 
     // If patient doesn't exist, create a new one
+    const patientId = await generatePatientId();
     const newPatient = {
+      id: patientId,
       name: studentName,
       age: 20, // Default age for student
       gender: 'Unknown', // Default gender
@@ -122,143 +153,192 @@ const findOrCreatePatient = async (studentName: string, studentId?: string): Pro
 
 // Save or update a medical record
 export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise<MedicalRecord> => {
-  const { id, ...recordData } = record;
-  let result;
-
-  // Handle patient connection
-  let patientId = null;
-  if (recordData.patient_name) {
-    patientId = await findOrCreatePatient(recordData.patient_name);
-  }
-
-  // Generate UDM ID for new records
-  let udmId = record.id; // Use the original record.id instead of recordData.id
-  if (!id && !udmId) {
-    udmId = await generateUDMId();
-  }
-
-  // Convert Date objects to ISO strings
-  const dataToSave = {
-    ...recordData,
-    id: udmId, // Use the UDM-formatted ID
-    patient_id: patientId, // Use the found/created patient ID
-    updated_at: new Date().toISOString()
-  };
-  
-  // Handle date conversion - just convert to string if it exists
-  if (recordData.date != null) {
-    dataToSave.date = String(recordData.date);
-  }
-
-  if (id) {
-    // Update existing record
-    const { data, error } = await supabase
-      .from('medical_records')
-      .update(dataToSave)
-      .eq('id', id)
-      .select()
-      .single();
+  try {
+    const { id, ...recordData } = record;
     
-    if (error) {
-      console.error('Error updating medical record:', error);
-      throw error;
+    // Handle patient connection
+    let patientId = recordData.patient_id;
+    if (recordData.patient_name && !patientId) {
+      patientId = await findOrCreatePatient(recordData.patient_name);
+    }
+
+    // Generate UDM ID for new records
+    let recordId = id;
+    if (!recordId) {
+      recordId = await generateUDMId();
+    }
+
+    // Prepare data for save
+    const dataToSave = {
+      ...recordData,
+      id: recordId,
+      patient_id: patientId,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Handle date conversion
+    if (recordData.date) {
+      dataToSave.date = new Date(recordData.date).toISOString();
+    } else {
+      dataToSave.date = new Date().toISOString();
+    }
+
+    let result;
+
+    if (id) {
+      // Update existing record
+      const { data, error } = await supabase
+        .from('medical_records')
+        .update(dataToSave)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating medical record:', error);
+        throw new Error(`Failed to update record: ${error.message}`);
+      }
+      
+      result = data;
+    } else {
+      // Insert new record
+      const { data, error } = await supabase
+        .from('medical_records')
+        .insert([dataToSave])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error inserting medical record:', error);
+        throw new Error(`Failed to save record: ${error.message}`);
+      }
+      
+      result = data;
     }
     
-    result = data;
-  } else {
-    // Insert new record with UDM ID
-    const { data, error } = await supabase
-      .from('medical_records')
-      .insert([{ ...dataToSave }])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error inserting medical record:', error);
-      throw error;
-    }
-    
-    result = data;
+    console.log('Medical record saved successfully:', result);
+    return result as MedicalRecord;
+  } catch (error) {
+    console.error('Error in saveMedicalRecord:', error);
+    throw error;
   }
-  
-  return result as MedicalRecord;
 };
 
 // Save or update a patient
 export const savePatient = async (patient: Partial<Patient>): Promise<Patient> => {
-  const { id, ...patientData } = patient;
-  
-  // Map frontend property names to database column names
-  const dbPatient: any = {
-    ...patientData,
-    // Handle specific field mappings if needed
-    last_visit: patientData.last_visit,
-    medical_history: patientData.medical_history
-  };
-  
-  let result;
+  try {
+    const { id, ...patientData } = patient;
+    
+    let result;
+    let patientId = id;
 
-  if (id) {
-    // Update existing patient
-    const { data, error } = await supabase
-      .from('patients')
-      .update({ ...dbPatient, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating patient:', error);
-      throw error;
+    // Generate patient ID for new patients
+    if (!patientId) {
+      patientId = await generatePatientId();
+    }
+
+    const dataToSave = {
+      ...patientData,
+      id: patientId,
+      updated_at: new Date().toISOString()
+    };
+
+    if (id) {
+      // Update existing patient
+      const { data, error } = await supabase
+        .from('patients')
+        .update(dataToSave)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating patient:', error);
+        throw new Error(`Failed to update patient: ${error.message}`);
+      }
+      
+      result = data;
+    } else {
+      // Make sure required fields are present
+      if (!dataToSave.name || !dataToSave.age || !dataToSave.gender) {
+        throw new Error('Missing required fields: name, age, and gender are required');
+      }
+      
+      // Insert new patient
+      const { data, error } = await supabase
+        .from('patients')
+        .insert([dataToSave])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error inserting patient:', error);
+        throw new Error(`Failed to create patient: ${error.message}`);
+      }
+      
+      result = data;
     }
     
-    result = data;
-  } else {
-    // Make sure required fields are present
-    if (!dbPatient.name || !dbPatient.age || !dbPatient.gender) {
-      throw new Error('Missing required fields for patient');
-    }
-    
-    // Insert new patient
-    const { data, error } = await supabase
-      .from('patients')
-      .insert([dbPatient])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error inserting patient:', error);
-      throw error;
-    }
-    
-    result = data;
+    console.log('Patient saved successfully:', result);
+    return result as Patient;
+  } catch (error) {
+    console.error('Error in savePatient:', error);
+    throw error;
   }
-  
-  return result as Patient;
 };
 
 // Delete a medical record
 export const deleteMedicalRecord = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('medical_records')
-    .delete()
-    .eq('id', id);
-  
-  if (error) {
-    console.error('Error deleting medical record:', error);
+  try {
+    console.log('Deleting medical record with ID:', id);
+    
+    const { error } = await supabase
+      .from('medical_records')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting medical record:', error);
+      throw new Error(`Failed to delete record: ${error.message}`);
+    }
+    
+    console.log('Medical record deleted successfully');
+  } catch (error) {
+    console.error('Error in deleteMedicalRecord:', error);
     throw error;
   }
 };
 
 // Delete a patient
 export const deletePatient = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('patients')
-    .delete()
-    .eq('id', id);
-  
-  if (error) {
-    console.error('Error deleting patient:', error);
+  try {
+    console.log('Deleting patient with ID:', id);
+    
+    // First delete all medical records for this patient
+    const { error: recordsError } = await supabase
+      .from('medical_records')
+      .delete()
+      .eq('patient_id', id);
+    
+    if (recordsError) {
+      console.error('Error deleting patient medical records:', recordsError);
+      throw new Error(`Failed to delete patient records: ${recordsError.message}`);
+    }
+    
+    // Then delete the patient
+    const { error } = await supabase
+      .from('patients')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting patient:', error);
+      throw new Error(`Failed to delete patient: ${error.message}`);
+    }
+    
+    console.log('Patient deleted successfully');
+  } catch (error) {
+    console.error('Error in deletePatient:', error);
     throw error;
   }
 };

@@ -37,7 +37,6 @@ const Dashboard: React.FC = () => {
   const calculateAnalytics = (currentPatients: Patient[], currentRecords: MedicalRecord[]) => {
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
     // Current metrics
     const totalPatients = currentPatients.length;
@@ -50,7 +49,6 @@ const Dashboard: React.FC = () => {
     }).length;
     
     // Historical metrics for comparison (simulate previous period data)
-    // In a real app, you'd query historical data from the database
     const previousTotalPatients = Math.max(0, totalPatients - Math.floor(Math.random() * 5));
     const previousCriticalCases = Math.max(0, criticalCases - Math.floor(Math.random() * 3));
     const previousPendingReviews = Math.max(0, pendingReviews + Math.floor(Math.random() * 5));
@@ -132,29 +130,33 @@ const Dashboard: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
+      console.log('Loading data from database...');
+      
       // Fetch patients
       const patientsData = await fetchPatients(searchQuery);
       setPatients(patientsData);
+      console.log('Patients loaded:', patientsData.length);
       
       // Fetch records
       const recordsData = await fetchMedicalRecords(searchQuery);
       setMedicalRecords(recordsData);
+      console.log('Medical records loaded:', recordsData.length);
       
       // Calculate real analytics
       const analytics = calculateAnalytics(patientsData, recordsData);
       setAnalyticsSummary(analytics);
       
-      console.log('Real analytics calculated:', analytics);
+      console.log('Analytics calculated:', analytics);
       toast.success('Data loaded successfully');
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('Failed to load data');
+      toast.error('Failed to load data from database');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initial data load
+  // Initial data load and event listeners setup
   useEffect(() => {
     loadData();
     
@@ -225,13 +227,18 @@ const Dashboard: React.FC = () => {
   const handleDeleteAnalysis = async (id: string) => {
     try {
       if (confirm('Are you sure you want to delete this record?')) {
+        console.log('Attempting to delete record:', id);
         await deleteMedicalRecord(id);
-        loadData(); // Refresh analytics after deletion
+        console.log('Record deleted, refreshing data...');
+        
+        // Force refresh the data immediately
+        await loadData();
+        
         toast.success('Record deleted successfully');
       }
     } catch (error) {
-      toast.error('Error deleting record');
       console.error('Delete error:', error);
+      toast.error(`Error deleting record: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -394,7 +401,7 @@ const Dashboard: React.FC = () => {
                     {medicalRecords.slice(0, 5).map((record) => (
                       <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {record.id?.substring(0, 8)}...
+                          {record.id}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                           {new Date(record.date || '').toLocaleDateString()}
