@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -5,8 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { FileText, Save, User, Stethoscope, Pill } from 'lucide-react';
+import { FileText, Save, User, Stethoscope, Pill, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   Form,
@@ -80,6 +82,43 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
     }, 800);
   };
 
+  const generateRecommendedActions = (analysisResult: any): string[] => {
+    const actions: string[] = [];
+    
+    if (analysisResult.severity >= 8) {
+      actions.push('Seek immediate medical attention');
+      actions.push('Monitor vital signs closely');
+    } else if (analysisResult.severity >= 6) {
+      actions.push('Schedule appointment with healthcare provider within 24-48 hours');
+      actions.push('Monitor symptoms for changes');
+    } else {
+      actions.push('Rest and stay hydrated');
+      actions.push('Monitor symptoms and seek care if worsening');
+    }
+    
+    // Add specific actions based on detected entities
+    if (analysisResult.entities) {
+      const symptoms = analysisResult.entities.filter((e: any) => e.type === 'symptom');
+      const medications = analysisResult.entities.filter((e: any) => e.type === 'medication');
+      
+      if (symptoms.some((s: any) => s.text.toLowerCase().includes('fever'))) {
+        actions.push('Take temperature regularly and maintain fever log');
+      }
+      
+      if (symptoms.some((s: any) => s.text.toLowerCase().includes('pain'))) {
+        actions.push('Apply appropriate pain management techniques');
+      }
+      
+      if (medications.length > 0) {
+        actions.push('Review current medications with healthcare provider');
+      }
+    }
+    
+    actions.push('Follow up as needed or if symptoms persist');
+    
+    return actions;
+  };
+
   const handleSaveAnalysis = async (data: StudentRecord) => {
     if (!data.studentName || !data.symptoms) {
       toast.error('Please enter student name and symptoms');
@@ -91,15 +130,18 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
     try {
       console.log('Saving medical record with data:', data);
       
+      // Generate recommended actions based on analysis
+      const recommendedActions = analysisResult ? generateRecommendedActions(analysisResult) : [];
+      
       // Create a new medical record with proper fields to match the database schema
       const newRecord = {
         patient_name: data.studentName,
-        diagnosis: data.diagnosis || 'No diagnosis provided',
+        diagnosis: data.diagnosis || 'Pending further evaluation',
         doctor_notes: data.symptoms,
         notes: data.medication || 'No medication prescribed',
         severity: analysisResult?.severity || 5,
         date: new Date().toISOString(),
-        recommended_actions: analysisResult?.keyPhrases || []
+        recommended_actions: recommendedActions
       };
 
       console.log('Prepared record for saving:', newRecord);
@@ -109,7 +151,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
       
       console.log('Record saved successfully:', savedRecord);
       
-      toast.success('Medical record saved successfully to database');
+      toast.success(`Medical record ${savedRecord.id} saved successfully to database`);
       
       // Dispatch custom event to notify other components
       window.dispatchEvent(new Event('savedAnalysesUpdated'));
@@ -242,6 +284,122 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
                 </Card>
               </div>
               
+              {/* AI Analysis Results with Medical Disclaimer */}
+              {analysisResult && (
+                <Card className="border-2 border-medical-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      AI Analysis Results
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Medical Disclaimer */}
+                    <Alert className="mb-4 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        <strong>Medical Disclaimer:</strong> This AI analysis is for preliminary assessment only and is not a substitute for professional medical diagnosis. Please consult with a qualified healthcare provider or doctor for accurate diagnosis and treatment.
+                      </AlertDescription>
+                    </Alert>
+
+                    {/* Severity Assessment */}
+                    {analysisResult.severity !== undefined && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Severity Assessment:</p>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-24 bg-gray-200 rounded-full">
+                            <div 
+                              className={`h-full rounded-full ${
+                                analysisResult.severity >= 8 ? 'bg-medical-critical' : 
+                                analysisResult.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
+                              }`}
+                              style={{ width: `${(analysisResult.severity / 10) * 100}%` }}
+                            />
+                          </div>
+                          <Badge 
+                            className={`${analysisResult.severity >= 8 ? 'text-medical-critical' : 
+                              analysisResult.severity >= 5 ? 'text-medical-warning' : 'text-medical-success'} 
+                              bg-opacity-10`}
+                            variant="outline"
+                          >
+                            {analysisResult.severity >= 8 ? 'High' : 
+                             analysisResult.severity >= 5 ? 'Medium' : 'Low'} 
+                             ({analysisResult.severity}/10)
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Suggested Diagnoses */}
+                    {analysisResult.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Possible Conditions (Preliminary):</p>
+                        <div className="flex flex-wrap gap-1">
+                          {analysisResult.suggestedDiagnosis.map((diagnosis: string, i: number) => (
+                            <Badge 
+                              key={i} 
+                              variant="outline" 
+                              className="bg-medical-primary/5 cursor-pointer hover:bg-medical-primary/10"
+                              onClick={() => form.setValue('diagnosis', diagnosis)}
+                            >
+                              {diagnosis}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recommended Actions */}
+                    {analysisResult && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Recommended Actions:</p>
+                        <ul className="list-disc pl-5 text-sm space-y-1">
+                          {generateRecommendedActions(analysisResult).map((action: string, i: number) => (
+                            <li key={i} className="text-gray-700 dark:text-gray-300">{action}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Detected Entities */}
+                    {analysisResult.entities && analysisResult.entities.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Detected Medical Terms:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(
+                            analysisResult.entities.reduce((acc: Record<string, any[]>, entity: any) => {
+                              if (!acc[entity.type]) acc[entity.type] = [];
+                              acc[entity.type].push(entity);
+                              return acc;
+                            }, {})
+                          ).slice(0, 4).map(([type, entities]: [string, any]) => (
+                            <div key={type} className="mb-2">
+                              <h4 className="text-xs uppercase text-gray-500 mb-1">{type}</h4>
+                              <div className="flex flex-wrap gap-1">
+                                {(entities as any[]).slice(0, 3).map((entity, i) => (
+                                  <Badge 
+                                    key={i}
+                                    variant="outline" 
+                                    className="bg-gray-50 dark:bg-gray-800"
+                                  >
+                                    {entity.text}
+                                  </Badge>
+                                ))}
+                                {entities.length > 3 && (
+                                  <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800">
+                                    +{entities.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+              
               {/* Diagnosis */}
               <Card>
                 <CardHeader className="pb-2">
@@ -258,7 +416,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
                       <FormItem>
                         <FormControl>
                           <Textarea 
-                            placeholder="Enter diagnosis here..."
+                            placeholder="Enter final diagnosis here..."
                             className="min-h-[80px]" 
                             {...field}
                           />
@@ -295,109 +453,6 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
                   />
                 </CardContent>
               </Card>
-              
-              {analysisResult && (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      AI Analysis Results
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {analysisResult.severity !== undefined && (
-                      <div className="mb-4">
-                        <p className="text-sm mb-1">Severity Assessment:</p>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-24 bg-gray-200 rounded-full">
-                            <div 
-                              className={`h-full rounded-full ${
-                                analysisResult.severity >= 8 ? 'bg-medical-critical' : 
-                                analysisResult.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
-                              }`}
-                              style={{ width: `${(analysisResult.severity / 10) * 100}%` }}
-                            />
-                          </div>
-                          <Badge 
-                            className={`${analysisResult.severity >= 8 ? 'text-medical-critical' : 
-                              analysisResult.severity >= 5 ? 'text-medical-warning' : 'text-medical-success'} 
-                              bg-opacity-10`}
-                            variant="outline"
-                          >
-                            {analysisResult.severity >= 8 ? 'High' : 
-                             analysisResult.severity >= 5 ? 'Medium' : 'Low'} 
-                             ({analysisResult.severity}/10)
-                          </Badge>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {analysisResult.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-sm mb-1">Suggested Diagnoses:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {analysisResult.suggestedDiagnosis.map((diagnosis: string, i: number) => (
-                            <Badge 
-                              key={i} 
-                              variant="outline" 
-                              className="bg-medical-primary/5 cursor-pointer"
-                              onClick={() => form.setValue('diagnosis', diagnosis)}
-                            >
-                              {diagnosis}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {analysisResult.entities && analysisResult.entities.length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-sm mb-1">Detected Entities:</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(
-                            analysisResult.entities.reduce((acc: Record<string, any[]>, entity: any) => {
-                              if (!acc[entity.type]) acc[entity.type] = [];
-                              acc[entity.type].push(entity);
-                              return acc;
-                            }, {})
-                          ).slice(0, 4).map(([type, entities]: [string, any]) => (
-                            <div key={type} className="mb-2">
-                              <h4 className="text-xs uppercase text-gray-500 mb-1">{type}</h4>
-                              <div className="flex flex-wrap gap-1">
-                                {(entities as any[]).slice(0, 3).map((entity, i) => (
-                                  <Badge 
-                                    key={i}
-                                    variant="outline" 
-                                    className="bg-gray-50"
-                                  >
-                                    {entity.text}
-                                  </Badge>
-                                ))}
-                                {entities.length > 3 && (
-                                  <Badge variant="outline" className="bg-gray-50">
-                                    +{entities.length - 3} more
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {analysisResult.keyPhrases && analysisResult.keyPhrases.length > 0 && (
-                      <div>
-                        <p className="text-sm mb-1">Key Phrases:</p>
-                        <ul className="list-disc pl-5 text-sm">
-                          {analysisResult.keyPhrases.map((phrase: string, i: number) => (
-                            <li key={i} className="mb-1">{phrase}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
               
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>

@@ -1,5 +1,28 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Patient, MedicalRecord } from '@/data/sampleData';
+
+// Generate UDM-formatted ID
+const generateUDMId = async (): Promise<string> => {
+  try {
+    // Get the count of existing records to generate the next ID
+    const { count, error } = await supabase
+      .from('medical_records')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('Error getting record count:', error);
+      // Fallback to random number if count fails
+      return `UDM${String(Math.floor(Math.random() * 1000) + 1).padStart(3, '0')}`;
+    }
+    
+    const nextNumber = (count || 0) + 1;
+    return `UDM${String(nextNumber).padStart(3, '0')}`;
+  } catch (error) {
+    console.error('Error generating UDM ID:', error);
+    return `UDM${String(Math.floor(Math.random() * 1000) + 1).padStart(3, '0')}`;
+  }
+};
 
 // Fetch patients from Supabase
 export const fetchPatients = async (searchQuery?: string): Promise<Patient[]> => {
@@ -108,9 +131,16 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     patientId = await findOrCreatePatient(recordData.patient_name);
   }
 
+  // Generate UDM ID for new records
+  let udmId = recordData.id;
+  if (!id && !udmId) {
+    udmId = await generateUDMId();
+  }
+
   // Convert Date objects to ISO strings
   const dataToSave = {
     ...recordData,
+    id: udmId, // Use the UDM-formatted ID
     patient_id: patientId, // Use the found/created patient ID
     updated_at: new Date().toISOString()
   };
@@ -136,7 +166,7 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     
     result = data;
   } else {
-    // Insert new record
+    // Insert new record with UDM ID
     const { data, error } = await supabase
       .from('medical_records')
       .insert([{ ...dataToSave }])
