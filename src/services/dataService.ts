@@ -132,7 +132,7 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
   }
 
   // Generate UDM ID for new records
-  let udmId = recordData.id;
+  let udmId = record.id; // Use the original record.id instead of recordData.id
   if (!id && !udmId) {
     udmId = await generateUDMId();
   }
