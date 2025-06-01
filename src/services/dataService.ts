@@ -259,15 +259,28 @@ export const savePatient = async (patient: Partial<Patient>): Promise<Patient> =
       
       result = data;
     } else {
-      // Make sure required fields are present
+      // Validate required fields for new patients
       if (!dataToSave.name || !dataToSave.age || !dataToSave.gender) {
         throw new Error('Missing required fields: name, age, and gender are required');
       }
+
+      // Ensure required fields have proper types
+      const newPatientData = {
+        id: patientId,
+        name: dataToSave.name,
+        age: Number(dataToSave.age),
+        gender: dataToSave.gender,
+        condition: dataToSave.condition || 'General Check-up',
+        status: dataToSave.status || 'Active',
+        last_visit: dataToSave.last_visit || new Date().toISOString().split('T')[0],
+        medical_history: dataToSave.medical_history || [],
+        updated_at: new Date().toISOString()
+      };
       
       // Insert new patient
       const { data, error } = await supabase
         .from('patients')
-        .insert([dataToSave])
+        .insert(newPatientData)
         .select()
         .single();
       
