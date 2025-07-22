@@ -34,8 +34,8 @@ const AnalyticsSummary: React.FC<AnalyticsSummaryProps> = ({ data }) => {
       value: data.totalPatients,
       icon: UserCheck,
       trend: patientsTrend 
-        ? `${patientsTrend.change >= 0 ? '+' : ''}${patientsTrend.percentage}% from last month`
-        : "No previous data",
+        ? `${patientsTrend.change >= 0 ? '+' : ''}${patientsTrend.change} from last month`
+        : data.totalPatients > 0 ? "Active patients in system" : "No patients yet",
       color: "text-medical-primary",
       trendColor: patientsTrend?.change >= 0 ? "text-green-600" : "text-red-600"
     },
@@ -44,7 +44,7 @@ const AnalyticsSummary: React.FC<AnalyticsSummaryProps> = ({ data }) => {
       value: data.criticalCases,
       icon: AlertCircle,
       trend: criticalTrend 
-        ? `${criticalTrend.change >= 0 ? '+' : ''}${criticalTrend.change} since last week`
+        ? `${criticalTrend.change >= 0 ? '+' : ''}${criticalTrend.change} from last week`
         : data.criticalCases > 0 ? "Requires attention" : "No critical cases",
       color: "text-medical-critical",
       trendColor: criticalTrend?.change > 0 ? "text-red-600" : "text-green-600"
@@ -64,10 +64,10 @@ const AnalyticsSummary: React.FC<AnalyticsSummaryProps> = ({ data }) => {
       value: data.recentAdmissions,
       icon: BarChart,
       trend: data.recentAdmissions > 0 
-        ? `${data.recentAdmissions} in the last 7 days`
+        ? `${data.recentAdmissions} new records in last 7 days`
         : "No recent admissions",
       color: "text-medical-success",
-      trendColor: "text-gray-600"
+      trendColor: data.recentAdmissions > 0 ? "text-blue-600" : "text-gray-600"
     },
   ];
 

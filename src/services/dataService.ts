@@ -322,6 +322,73 @@ export const deleteMedicalRecord = async (id: string): Promise<void> => {
   }
 };
 
+// Get analytics data with historical comparison
+export const getAnalyticsData = async () => {
+  try {
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+
+    // Fetch all patients and records
+    const [patientsResponse, recordsResponse] = await Promise.all([
+      supabase.from('patients').select('*'),
+      supabase.from('medical_records').select('*')
+    ]);
+
+    if (patientsResponse.error) throw patientsResponse.error;
+    if (recordsResponse.error) throw recordsResponse.error;
+
+    const patients = patientsResponse.data || [];
+    const records = recordsResponse.data || [];
+
+    // Current metrics
+    const totalPatients = patients.length;
+    const criticalCases = patients.filter(p => p.status === 'Critical').length;
+    const pendingReviews = records.filter(r => !r.diagnosis || r.diagnosis.trim() === '').length;
+    const recentAdmissions = records.filter(r => {
+      if (!r.created_at) return false;
+      const recordDate = new Date(r.created_at);
+      return recordDate >= oneWeekAgo;
+    }).length;
+
+    // Historical metrics for comparison
+    const previousMonthPatients = patients.filter(p => {
+      if (!p.created_at) return false;
+      const createdDate = new Date(p.created_at);
+      return createdDate <= oneMonthAgo && createdDate >= twoMonthsAgo;
+    }).length;
+
+    const previousWeekCritical = records.filter(r => {
+      if (!r.created_at) return false;
+      const recordDate = new Date(r.created_at);
+      return recordDate <= oneWeekAgo && recordDate >= new Date(oneWeekAgo.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }).filter(r => {
+      const patient = patients.find(p => p.id === r.patient_id);
+      return patient?.status === 'Critical';
+    }).length;
+
+    const previousWeekPending = records.filter(r => {
+      if (!r.created_at) return false;
+      const recordDate = new Date(r.created_at);
+      return recordDate <= oneWeekAgo && recordDate >= new Date(oneWeekAgo.getTime() - 7 * 24 * 60 * 60 * 1000);
+    }).filter(r => !r.diagnosis || r.diagnosis.trim() === '').length;
+
+    return {
+      totalPatients,
+      criticalCases,
+      pendingReviews,
+      recentAdmissions,
+      previousTotalPatients: previousMonthPatients,
+      previousCriticalCases: previousWeekCritical,
+      previousPendingReviews: previousWeekPending
+    };
+  } catch (error) {
+    console.error('Error fetching analytics data:', error);
+    throw error;
+  }
+};
+
 // Delete a patient
 export const deletePatient = async (id: string): Promise<void> => {
   try {

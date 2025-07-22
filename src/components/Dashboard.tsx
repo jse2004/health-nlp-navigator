@@ -11,7 +11,7 @@ import NewNLPAnalysis from './NewNLPAnalysis';
 import SearchBar from './SearchBar';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord } from '@/services/dataService';
+import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, deletePatient, getAnalyticsData } from '@/services/dataService';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
@@ -33,35 +33,25 @@ const Dashboard: React.FC = () => {
     previousPendingReviews: 0
   });
 
-  // Calculate real analytics from database
-  const calculateAnalytics = (currentPatients: Patient[], currentRecords: MedicalRecord[]) => {
-    const now = new Date();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    // Current metrics
-    const totalPatients = currentPatients.length;
-    const criticalCases = currentPatients.filter(p => p.status === 'Critical').length;
-    const pendingReviews = currentRecords.filter(r => !r.diagnosis || r.diagnosis.trim() === '').length;
-    const recentAdmissions = currentRecords.filter(r => {
-      if (!r.date) return false;
-      const recordDate = new Date(r.date);
-      return recordDate >= oneWeekAgo;
-    }).length;
-    
-    // Historical metrics for comparison (simulate previous period data)
-    const previousTotalPatients = Math.max(0, totalPatients - Math.floor(Math.random() * 5));
-    const previousCriticalCases = Math.max(0, criticalCases - Math.floor(Math.random() * 3));
-    const previousPendingReviews = Math.max(0, pendingReviews + Math.floor(Math.random() * 5));
-    
-    return {
-      totalPatients,
-      criticalCases,
-      pendingReviews,
-      recentAdmissions,
-      previousTotalPatients,
-      previousCriticalCases,
-      previousPendingReviews
-    };
+  // Load analytics data from database
+  const loadAnalyticsData = async () => {
+    try {
+      const analyticsData = await getAnalyticsData();
+      console.log('Analytics calculated:', analyticsData);
+      setAnalyticsSummary(analyticsData);
+      return analyticsData;
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+      return {
+        totalPatients: 0,
+        criticalCases: 0,
+        pendingReviews: 0,
+        recentAdmissions: 0,
+        previousTotalPatients: 0,
+        previousCriticalCases: 0,
+        previousPendingReviews: 0
+      };
+    }
   };
 
   // Generate real insights from actual data
@@ -132,21 +122,18 @@ const Dashboard: React.FC = () => {
     try {
       console.log('Loading data from database...');
       
-      // Fetch patients
-      const patientsData = await fetchPatients(searchQuery);
-      setPatients(patientsData);
-      console.log('Patients loaded:', patientsData.length);
+      const [patientsData, recordsData, analyticsData] = await Promise.all([
+        fetchPatients(searchQuery),
+        fetchMedicalRecords(searchQuery),
+        loadAnalyticsData()
+      ]);
       
-      // Fetch records
-      const recordsData = await fetchMedicalRecords(searchQuery);
+      setPatients(patientsData);
       setMedicalRecords(recordsData);
+      
+      console.log('Patients loaded:', patientsData.length);
       console.log('Medical records loaded:', recordsData.length);
       
-      // Calculate real analytics
-      const analytics = calculateAnalytics(patientsData, recordsData);
-      setAnalyticsSummary(analytics);
-      
-      console.log('Analytics calculated:', analytics);
       toast.success('Data loaded successfully');
     } catch (error) {
       console.error('Error loading data:', error);
