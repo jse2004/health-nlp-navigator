@@ -69,12 +69,17 @@ export const fetchPatients = async (searchQuery?: string): Promise<Patient[]> =>
   }
 };
 
-// Fetch medical records from Supabase
-export const fetchMedicalRecords = async (searchQuery?: string, patientId?: string): Promise<MedicalRecord[]> => {
+// Fetch medical records from Supabase (only active records by default)
+export const fetchMedicalRecords = async (searchQuery?: string, patientId?: string, includeInactive = false): Promise<MedicalRecord[]> => {
   try {
     let query = supabase
       .from('medical_records')
       .select('*');
+
+    // Only show active records by default
+    if (!includeInactive) {
+      query = query.eq('status', 'active');
+    }
 
     if (patientId) {
       query = query.eq('patient_id', patientId);
@@ -151,6 +156,32 @@ const findOrCreatePatient = async (studentName: string): Promise<string | null> 
   }
 };
 
+// Reactivate a medical record when a patient visits again
+const reactivateMedicalRecordsByPatient = async (patientId: string): Promise<void> => {
+  try {
+    console.log('Reactivating medical records for patient ID:', patientId);
+    
+    const { error } = await supabase
+      .from('medical_records')
+      .update({ 
+        status: 'active',
+        updated_at: new Date().toISOString()
+      })
+      .eq('patient_id', patientId)
+      .eq('status', 'inactive');
+    
+    if (error) {
+      console.error('Error reactivating medical records:', error);
+      throw new Error(`Failed to reactivate records: ${error.message}`);
+    }
+    
+    console.log('Medical records reactivated successfully');
+  } catch (error) {
+    console.error('Error in reactivateMedicalRecordsByPatient:', error);
+    throw error;
+  }
+};
+
 // Save or update a medical record
 export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise<MedicalRecord> => {
   try {
@@ -160,6 +191,11 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
     let patientId = recordData.patient_id;
     if (recordData.patient_name && !patientId) {
       patientId = await findOrCreatePatient(recordData.patient_name);
+    }
+
+    // If we have a patient ID, reactivate any inactive records for this patient
+    if (patientId && !id) { // Only for new records
+      await reactivateMedicalRecordsByPatient(patientId);
     }
 
     // Generate UDM ID for new records
@@ -173,6 +209,7 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
       ...recordData,
       id: recordId,
       patient_id: patientId,
+      status: 'active', // Ensure new/updated records are active
       updated_at: new Date().toISOString()
     };
     
@@ -300,26 +337,34 @@ export const savePatient = async (patient: Partial<Patient>): Promise<Patient> =
   }
 };
 
-// Delete a medical record
-export const deleteMedicalRecord = async (id: string): Promise<void> => {
+// Deactivate a medical record (soft delete)
+export const deactivateMedicalRecord = async (id: string): Promise<void> => {
   try {
-    console.log('Deleting medical record with ID:', id);
+    console.log('Deactivating medical record with ID:', id);
     
     const { error } = await supabase
       .from('medical_records')
-      .delete()
+      .update({ 
+        status: 'inactive',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', id);
     
     if (error) {
-      console.error('Error deleting medical record:', error);
-      throw new Error(`Failed to delete record: ${error.message}`);
+      console.error('Error deactivating medical record:', error);
+      throw new Error(`Failed to deactivate record: ${error.message}`);
     }
     
-    console.log('Medical record deleted successfully');
+    console.log('Medical record deactivated successfully');
   } catch (error) {
-    console.error('Error in deleteMedicalRecord:', error);
+    console.error('Error in deactivateMedicalRecord:', error);
     throw error;
   }
+};
+
+// Keep the old deleteMedicalRecord for backward compatibility (now calls deactivate)
+export const deleteMedicalRecord = async (id: string): Promise<void> => {
+  return deactivateMedicalRecord(id);
 };
 
 // Get analytics data with historical comparison
@@ -330,10 +375,10 @@ export const getAnalyticsData = async () => {
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    // Fetch all patients and records
+    // Fetch all patients and only active records
     const [patientsResponse, recordsResponse] = await Promise.all([
       supabase.from('patients').select('*'),
-      supabase.from('medical_records').select('*')
+      supabase.from('medical_records').select('*').eq('status', 'active')
     ]);
 
     if (patientsResponse.error) throw patientsResponse.error;
@@ -342,7 +387,7 @@ export const getAnalyticsData = async () => {
     const patients = patientsResponse.data || [];
     const records = recordsResponse.data || [];
 
-    // Current metrics
+    // Current metrics (only counting active records)
     const totalPatients = patients.length;
     const criticalCases = patients.filter(p => p.status === 'Critical').length;
     const pendingReviews = records.filter(r => !r.diagnosis || r.diagnosis.trim() === '').length;

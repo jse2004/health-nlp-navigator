@@ -20,6 +20,7 @@ export interface MedicalRecord {
   severity: number;
   patient_name?: string; // Using snake_case for DB compatibility
   notes?: string;
+  status?: 'active' | 'inactive'; // Status for soft delete functionality
 }
 
 export interface AnalyticsSummary {
