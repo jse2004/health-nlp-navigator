@@ -43,18 +43,6 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 max-w-2xl mx-8">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400 dark:text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search patients, records, or insights..."
-            className="bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm rounded-xl block w-full pl-12 pr-4 py-3 focus:ring-2 focus:ring-medical-primary focus:border-medical-primary outline-none transition-all duration-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80"
-          />
-        </div>
-      </div>
 
       <div className="flex items-center space-x-4">
         <ThemeToggle />
