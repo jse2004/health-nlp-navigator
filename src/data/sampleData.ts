@@ -5,7 +5,7 @@ export interface Patient {
   age: number;
   gender: 'Male' | 'Female' | 'Other';
   condition: string;
-  status: 'Critical' | 'Warning' | 'Normal';
+  status: 'Critical' | 'Warning' | 'Normal' | 'Active' | 'Inactive';
   last_visit: string; // Using snake_case for DB compatibility
   medical_history: string[]; // Using snake_case for DB compatibility
 }

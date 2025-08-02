@@ -67,19 +67,41 @@ const extractEntities = (text: string): NLPEntity[] => {
   
   if (!text) return entities;
   
-  // Comprehensive medical terminology database
+  // Comprehensive and precise medical terminology database
   const medicalTerms = [
-    // Symptoms
-    { patterns: ['headache', 'head pain', 'cephalgia'], type: 'symptom' },
-    { patterns: ['chest pain', 'thoracic pain', 'angina'], type: 'symptom' },
-    { patterns: ['shortness of breath', 'dyspnea', 'breathing difficulty'], type: 'symptom' },
-    { patterns: ['nausea', 'vomiting', 'emesis'], type: 'symptom' },
-    { patterns: ['fever', 'pyrexia', 'hyperthermia'], type: 'symptom' },
-    { patterns: ['cough', 'productive cough', 'dry cough'], type: 'symptom' },
-    { patterns: ['dizziness', 'vertigo', 'lightheaded'], type: 'symptom' },
-    { patterns: ['fatigue', 'weakness', 'malaise'], type: 'symptom' },
-    { patterns: ['abdominal pain', 'stomach pain', 'belly pain'], type: 'symptom' },
-    { patterns: ['joint pain', 'arthralgia', 'muscle pain'], type: 'symptom' },
+    // Precise symptom terminology
+    { patterns: ['cephalgia', 'migraine', 'tension headache', 'cluster headache', 'chronic daily headache'], type: 'symptom' },
+    { patterns: ['angina pectoris', 'precordial pain', 'retrosternal pain', 'pleuritic chest pain'], type: 'symptom' },
+    { patterns: ['dyspnea on exertion', 'orthopnea', 'paroxysmal nocturnal dyspnea', 'tachypnea'], type: 'symptom' },
+    { patterns: ['nausea and vomiting', 'hematemesis', 'bilious vomiting', 'projectile vomiting'], type: 'symptom' },
+    { patterns: ['hyperthermia', 'pyrexia', 'febrile episodes', 'low-grade fever', 'high-grade fever'], type: 'symptom' },
+    { patterns: ['productive cough', 'dry cough', 'chronic cough', 'hemoptysis', 'nocturnal cough'], type: 'symptom' },
+    { patterns: ['vertigo', 'presyncope', 'syncope', 'orthostatic hypotension symptoms'], type: 'symptom' },
+    { patterns: ['asthenia', 'generalized weakness', 'chronic fatigue syndrome', 'lethargy'], type: 'symptom' },
+    { patterns: ['epigastric pain', 'right upper quadrant pain', 'periumbilical pain', 'suprapubic pain'], type: 'symptom' },
+    { patterns: ['polyarthralgia', 'monoarthritis', 'myalgia', 'fibromyalgia', 'arthritis'], type: 'symptom' },
+    
+    // Additional precise symptoms
+    { patterns: ['diplopia', 'blurred vision', 'photophobia', 'visual field defects', 'scotoma'], type: 'symptom' },
+    { patterns: ['palpitations', 'arrhythmia symptoms', 'chest fluttering', 'extrasystoles'], type: 'symptom' },
+    { patterns: ['polyuria', 'oliguria', 'anuria', 'dysuria', 'hematuria', 'proteinuria'], type: 'symptom' },
+    { patterns: ['dysphagia', 'odynophagia', 'gastroesophageal reflux symptoms', 'heartburn'], type: 'symptom' },
+    { patterns: ['paresthesia', 'numbness', 'tingling', 'peripheral neuropathy symptoms', 'hyperesthesia'], type: 'symptom' },
+    
+    // Neurological symptoms
+    { patterns: ['ataxia', 'coordination difficulties', 'balance problems', 'gait disturbance'], type: 'symptom' },
+    { patterns: ['tremor', 'involuntary movements', 'muscle fasciculations', 'tics'], type: 'symptom' },
+    { patterns: ['aphasia', 'dysarthria', 'speech difficulties', 'slurred speech'], type: 'symptom' },
+    { patterns: ['seizure', 'convulsions', 'epileptic episodes', 'aura'], type: 'symptom' },
+    
+    // Gastrointestinal symptoms
+    { patterns: ['melena', 'hematochezia', 'bloody stools', 'tarry stools'], type: 'symptom' },
+    { patterns: ['diarrhea', 'constipation', 'bowel movement changes', 'fecal incontinence'], type: 'symptom' },
+    { patterns: ['jaundice', 'icterus', 'scleral icterus', 'yellowing of skin'], type: 'symptom' },
+    
+    // Dermatological symptoms
+    { patterns: ['rash', 'urticaria', 'pruritus', 'skin lesions', 'erythema'], type: 'symptom' },
+    { patterns: ['alopecia', 'hair loss', 'brittle nails', 'skin discoloration'], type: 'symptom' },
     
     // Vital signs and measurements
     { patterns: ['blood pressure', 'bp', 'hypertension', 'hypotension'], type: 'vital' },
@@ -88,25 +110,37 @@ const extractEntities = (text: string): NLPEntity[] => {
     { patterns: ['respiratory rate', 'breathing rate', 'respiration'], type: 'vital' },
     { patterns: ['oxygen saturation', 'spo2', 'pulse ox'], type: 'vital' },
     
-    // Medical conditions
-    { patterns: ['diabetes', 'diabetes mellitus', 'dm'], type: 'condition' },
-    { patterns: ['hypertension', 'high blood pressure', 'htn'], type: 'condition' },
-    { patterns: ['asthma', 'bronchial asthma'], type: 'condition' },
-    { patterns: ['stroke', 'cerebrovascular accident', 'cva'], type: 'condition' },
-    { patterns: ['myocardial infarction', 'heart attack', 'mi'], type: 'condition' },
-    { patterns: ['pneumonia', 'lung infection'], type: 'condition' },
-    { patterns: ['migraine', 'cluster headache'], type: 'condition' },
-    { patterns: ['depression', 'major depressive disorder'], type: 'condition' },
-    { patterns: ['anxiety', 'generalized anxiety disorder'], type: 'condition' },
+    // Precise medical conditions with ICD-10 terminology
+    { patterns: ['diabetes mellitus type 1', 'diabetes mellitus type 2', 'gestational diabetes', 'diabetic ketoacidosis'], type: 'condition' },
+    { patterns: ['essential hypertension', 'secondary hypertension', 'malignant hypertension', 'hypertensive crisis'], type: 'condition' },
+    { patterns: ['bronchial asthma', 'exercise-induced asthma', 'occupational asthma', 'status asthmaticus'], type: 'condition' },
+    { patterns: ['ischemic stroke', 'hemorrhagic stroke', 'transient ischemic attack', 'cerebrovascular accident'], type: 'condition' },
+    { patterns: ['acute myocardial infarction', 'non-st elevation myocardial infarction', 'unstable angina'], type: 'condition' },
+    { patterns: ['community-acquired pneumonia', 'hospital-acquired pneumonia', 'aspiration pneumonia'], type: 'condition' },
+    { patterns: ['migraine with aura', 'migraine without aura', 'chronic migraine', 'medication overuse headache'], type: 'condition' },
+    { patterns: ['major depressive disorder', 'persistent depressive disorder', 'bipolar disorder', 'seasonal affective disorder'], type: 'condition' },
+    { patterns: ['generalized anxiety disorder', 'panic disorder', 'social anxiety disorder', 'specific phobia'], type: 'condition' },
     
-    // Medications
-    { patterns: ['lisinopril', 'ace inhibitor'], type: 'medication' },
-    { patterns: ['atorvastatin', 'statin', 'lipitor'], type: 'medication' },
-    { patterns: ['metformin', 'glucophage'], type: 'medication' },
-    { patterns: ['aspirin', 'acetylsalicylic acid'], type: 'medication' },
-    { patterns: ['ibuprofen', 'advil', 'motrin'], type: 'medication' },
-    { patterns: ['amoxicillin', 'antibiotic'], type: 'medication' },
-    { patterns: ['prednisone', 'corticosteroid'], type: 'medication' },
+    // Additional precise conditions
+    { patterns: ['atrial fibrillation', 'atrial flutter', 'ventricular tachycardia', 'heart failure'], type: 'condition' },
+    { patterns: ['chronic obstructive pulmonary disease', 'chronic bronchitis', 'emphysema'], type: 'condition' },
+    { patterns: ['rheumatoid arthritis', 'osteoarthritis', 'psoriatic arthritis', 'ankylosing spondylitis'], type: 'condition' },
+    { patterns: ['irritable bowel syndrome', 'inflammatory bowel disease', 'crohns disease', 'ulcerative colitis'], type: 'condition' },
+    
+    // Precise medication terminology with generic and brand names
+    { patterns: ['lisinopril', 'enalapril', 'captopril', 'ace inhibitor', 'angiotensin-converting enzyme inhibitor'], type: 'medication' },
+    { patterns: ['atorvastatin', 'simvastatin', 'rosuvastatin', 'hmg-coa reductase inhibitor', 'statin'], type: 'medication' },
+    { patterns: ['metformin hydrochloride', 'glucophage', 'biguanide antidiabetic'], type: 'medication' },
+    { patterns: ['acetylsalicylic acid', 'aspirin', 'antiplatelet agent', 'nsaid'], type: 'medication' },
+    { patterns: ['ibuprofen', 'naproxen', 'diclofenac', 'nonsteroidal anti-inflammatory drug'], type: 'medication' },
+    { patterns: ['amoxicillin-clavulanate', 'cephalexin', 'azithromycin', 'beta-lactam antibiotic'], type: 'medication' },
+    { patterns: ['prednisolone', 'methylprednisolone', 'hydrocortisone', 'systemic corticosteroid'], type: 'medication' },
+    
+    // Additional medication classes
+    { patterns: ['furosemide', 'hydrochlorothiazide', 'loop diuretic', 'thiazide diuretic'], type: 'medication' },
+    { patterns: ['levothyroxine', 'thyroid hormone replacement', 'synthroid'], type: 'medication' },
+    { patterns: ['insulin', 'rapid-acting insulin', 'long-acting insulin', 'insulin analogue'], type: 'medication' },
+    { patterns: ['warfarin', 'apixaban', 'rivaroxaban', 'anticoagulant'], type: 'medication' },
     
     // Procedures and tests
     { patterns: ['ecg', 'electrocardiogram', 'ekg'], type: 'procedure' },

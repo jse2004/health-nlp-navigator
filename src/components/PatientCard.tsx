@@ -20,6 +20,10 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
         return 'badge-warning';
       case 'Normal':
         return 'badge-normal';
+      case 'Active':
+        return 'badge-success';
+      case 'Inactive':
+        return 'badge-muted';
       default:
         return 'badge-normal';
     }

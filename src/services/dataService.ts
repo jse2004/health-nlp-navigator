@@ -44,7 +44,7 @@ const generatePatientId = async (): Promise<string> => {
   }
 };
 
-// Fetch patients from Supabase
+// Fetch patients from Supabase and update status based on active medical records
 export const fetchPatients = async (searchQuery?: string): Promise<Patient[]> => {
   try {
     let query = supabase
@@ -62,7 +62,50 @@ export const fetchPatients = async (searchQuery?: string): Promise<Patient[]> =>
       throw error;
     }
     
-    return data as Patient[] || [];
+    const patients = data as Patient[] || [];
+    
+    // Update patient status based on active medical records
+    const updatedPatients = await Promise.all(patients.map(async (patient) => {
+      try {
+        // Check if patient has any active medical records
+        const { data: activeRecords, error: recordsError } = await supabase
+          .from('medical_records')
+          .select('id')
+          .eq('patient_id', patient.id)
+          .eq('status', 'active')
+          .limit(1);
+        
+        if (recordsError) {
+          console.error('Error checking active records for patient:', patient.id, recordsError);
+          return patient; // Return original patient if there's an error
+        }
+        
+        // Determine if patient should be active or inactive
+        const hasActiveRecords = activeRecords && activeRecords.length > 0;
+        const newStatus: Patient['status'] = hasActiveRecords ? 'Active' : 'Inactive';
+        
+        // Update patient status if it has changed
+        if (patient.status !== newStatus) {
+          const { error: updateError } = await supabase
+            .from('patients')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', patient.id);
+          
+          if (updateError) {
+            console.error('Error updating patient status:', updateError);
+          }
+          
+          return { ...patient, status: newStatus };
+        }
+        
+        return patient;
+      } catch (error) {
+        console.error('Error processing patient status:', error);
+        return patient;
+      }
+    }));
+    
+    return updatedPatients;
   } catch (error) {
     console.error('Error in fetchPatients:', error);
     throw error;
