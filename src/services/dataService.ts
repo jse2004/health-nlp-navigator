@@ -2,6 +2,21 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 
+export interface MedicalCertificate {
+  id: string;
+  medical_record_id: string;
+  patient_name: string;
+  issue_date: string;
+  valid_until?: string;
+  certificate_type: string;
+  reason: string;
+  recommendations?: string;
+  doctor_name: string;
+  certificate_number: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Generate UDM-formatted ID
 const generateUDMId = async (): Promise<string> => {
   try {
@@ -509,4 +524,45 @@ export const deletePatient = async (id: string): Promise<void> => {
     console.error('Error in deletePatient:', error);
     throw error;
   }
+};
+
+// Medical Certificate functions
+export const createMedicalCertificate = async (certificateData: {
+  medical_record_id: string;
+  patient_name: string;
+  reason: string;
+  recommendations?: string;
+  valid_until?: string;
+  doctor_name?: string;
+}): Promise<MedicalCertificate> => {
+  const { data, error } = await supabase
+    .from('medical_certificates')
+    .insert([{
+      ...certificateData,
+      doctor_name: certificateData.doctor_name || 'Dr. Medical Officer'
+    }])
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating medical certificate:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+export const fetchMedicalCertificatesByRecord = async (medicalRecordId: string): Promise<MedicalCertificate[]> => {
+  const { data, error } = await supabase
+    .from('medical_certificates')
+    .select('*')
+    .eq('medical_record_id', medicalRecordId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching medical certificates:', error);
+    throw error;
+  }
+
+  return data || [];
 };

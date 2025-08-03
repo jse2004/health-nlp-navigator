@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Clipboard, FileText, BarChart, Award, Stethoscope, Download, Save } from 'lucide-react';
+import { Clipboard, FileText, BarChart, Award, Stethoscope, Download, Save, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
-import { saveMedicalRecord } from '@/services/dataService';
+import { saveMedicalRecord, createMedicalCertificate, fetchMedicalCertificatesByRecord, type MedicalCertificate } from '@/services/dataService';
+import MedicalCertificateComponent from './MedicalCertificate';
 
 interface MedicalRecordAnalysisProps {
   record?: MedicalRecord;
@@ -34,6 +35,9 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [certificates, setCertificates] = useState<MedicalCertificate[]>([]);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+  const [selectedCertificate, setSelectedCertificate] = useState<MedicalCertificate | null>(null);
   
   // Initialize edited record when the record changes
   useEffect(() => {
@@ -44,8 +48,23 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
       const doctorNotes = record.doctor_notes || record.notes || '';
       const result = analyzeMedicalText(doctorNotes);
       setAnalysisResult(result);
+      
+      // Load existing certificates
+      loadCertificates();
     }
   }, [record]);
+
+  // Load certificates for this record
+  const loadCertificates = async () => {
+    if (!record?.id) return;
+    
+    try {
+      const certificatesData = await fetchMedicalCertificatesByRecord(record.id);
+      setCertificates(certificatesData);
+    } catch (error) {
+      console.error('Error loading certificates:', error);
+    }
+  };
   
   // If no record is selected, don't render anything
   if (!record) {
@@ -139,6 +158,39 @@ ${(editedRecord.recommended_actions || []).map((action, i) => `${i + 1}. ${actio
     toast.success('Record downloaded successfully');
   };
 
+  // Create medical certificate
+  const handleCreateCertificate = async () => {
+    if (!editedRecord || !editedRecord.id) {
+      toast.error('Please save the record first');
+      return;
+    }
+
+    try {
+      const certificateData = {
+        medical_record_id: editedRecord.id,
+        patient_name: editedRecord.patient_name || 'Unknown Patient',
+        reason: editedRecord.diagnosis || 'Medical consultation',
+        recommendations: editedRecord.recommended_actions?.join('; '),
+        valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
+        doctor_name: 'Dr. Medical Officer'
+      };
+
+      const certificate = await createMedicalCertificate(certificateData);
+      
+      // Refresh certificates list
+      await loadCertificates();
+      
+      // Show the certificate
+      setSelectedCertificate(certificate);
+      setIsCertificateOpen(true);
+      
+      toast.success('Medical certificate created successfully');
+    } catch (error) {
+      console.error('Error creating certificate:', error);
+      toast.error('Failed to create medical certificate');
+    }
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full md:max-w-[600px] overflow-y-auto">
@@ -192,6 +244,16 @@ ${(editedRecord.recommended_actions || []).map((action, i) => `${i + 1}. ${actio
             >
               <Download className="h-4 w-4" />
               <span>Download</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleCreateCertificate}
+              className="flex items-center gap-1 text-primary hover:text-primary"
+              disabled={!editedRecord?.id}
+            >
+              <FileCheck className="h-4 w-4" />
+              <span>Medical Certificate</span>
             </Button>
             {isEditing ? (
               <>
@@ -473,6 +535,18 @@ ${(editedRecord.recommended_actions || []).map((action, i) => `${i + 1}. ${actio
           </Tabs>
         </div>
       </SheetContent>
+      
+      {/* Medical Certificate Dialog */}
+      {selectedCertificate && (
+        <MedicalCertificateComponent
+          isOpen={isCertificateOpen}
+          onClose={() => {
+            setIsCertificateOpen(false);
+            setSelectedCertificate(null);
+          }}
+          certificateData={selectedCertificate}
+        />
+      )}
     </Sheet>
   );
 };

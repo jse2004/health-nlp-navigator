@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      medical_certificates: {
+        Row: {
+          certificate_number: string
+          certificate_type: string
+          created_at: string
+          doctor_name: string | null
+          id: string
+          issue_date: string
+          medical_record_id: string
+          patient_name: string
+          reason: string
+          recommendations: string | null
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          certificate_number?: string
+          certificate_type?: string
+          created_at?: string
+          doctor_name?: string | null
+          id?: string
+          issue_date?: string
+          medical_record_id: string
+          patient_name: string
+          reason: string
+          recommendations?: string | null
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          certificate_number?: string
+          certificate_type?: string
+          created_at?: string
+          doctor_name?: string | null
+          id?: string
+          issue_date?: string
+          medical_record_id?: string
+          patient_name?: string
+          reason?: string
+          recommendations?: string | null
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       medical_records: {
         Row: {
           created_at: string | null
