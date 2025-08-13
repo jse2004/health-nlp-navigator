@@ -112,6 +112,41 @@ export type Database = {
           },
         ]
       }
+      patient_assignments: {
+        Row: {
+          assigned_by: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          patient_id: string
+          staff_user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          patient_id: string
+          staff_user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          patient_id?: string
+          staff_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_assignments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           age: number
@@ -151,15 +186,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["staff_role"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["staff_role"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["staff_role"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_uuid: string }
+        Returns: Database["public"]["Enums"]["staff_role"]
+      }
+      user_can_access_patient: {
+        Args: { user_uuid: string; patient_uuid: string }
+        Returns: boolean
+      }
+      user_has_role: {
+        Args: {
+          user_uuid: string
+          required_role: Database["public"]["Enums"]["staff_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      staff_role: "admin" | "doctor" | "nurse" | "receptionist" | "technician"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -286,6 +359,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      staff_role: ["admin", "doctor", "nurse", "receptionist", "technician"],
+    },
   },
 } as const
