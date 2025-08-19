@@ -414,6 +414,17 @@ const Dashboard: React.FC = () => {
                           <Button 
                             variant="ghost" 
                             size="sm"
+                            className="text-blue-600 hover:text-blue-800 mr-2"
+                            onClick={() => {
+                              setSelectedRecord(record);
+                              setIsAnalysisOpen(true);
+                            }}
+                          >
+                            Details
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
                             className="text-medical-primary mr-2"
                             onClick={() => {
                               setSelectedRecord(record);

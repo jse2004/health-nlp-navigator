@@ -251,8 +251,58 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise
       patientId = await findOrCreatePatient(recordData.patient_name);
     }
 
-    // If we have a patient ID, reactivate any inactive records for this patient
+    // For new records, check if the same patient already has an active record
     if (patientId && !id) { // Only for new records
+      // First, check if there's already an active record for this patient
+      const { data: existingActiveRecords, error: fetchError } = await supabase
+        .from('medical_records')
+        .select('id')
+        .eq('patient_id', patientId)
+        .eq('status', 'active')
+        .limit(1);
+
+      if (fetchError) {
+        console.error('Error checking for existing active records:', fetchError);
+        throw new Error(`Failed to check existing records: ${fetchError.message}`);
+      }
+
+      // If there's an existing active record, update it instead of creating a new one
+      if (existingActiveRecords && existingActiveRecords.length > 0) {
+        const existingRecordId = existingActiveRecords[0].id;
+        console.log('Found existing active record for patient, updating instead of creating new:', existingRecordId);
+        
+        // Update the existing record
+        const dataToUpdate = {
+          ...recordData,
+          patient_id: patientId,
+          status: 'active',
+          updated_at: new Date().toISOString()
+        };
+        
+        // Handle date conversion
+        if (recordData.date) {
+          dataToUpdate.date = new Date(recordData.date).toISOString();
+        } else {
+          dataToUpdate.date = new Date().toISOString();
+        }
+
+        const { data, error } = await supabase
+          .from('medical_records')
+          .update(dataToUpdate)
+          .eq('id', existingRecordId)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error updating existing medical record:', error);
+          throw new Error(`Failed to update existing record: ${error.message}`);
+        }
+        
+        console.log('Successfully updated existing medical record:', data);
+        return data as MedicalRecord;
+      }
+
+      // If no active record exists, reactivate any inactive records for this patient
       await reactivateMedicalRecordsByPatient(patientId);
     }
 
