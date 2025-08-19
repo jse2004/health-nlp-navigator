@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { MedicalRecord, Patient } from '@/data/sampleData';
 import { fetchMedicalRecords, fetchPatients } from '@/services/dataService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PatientDetailsModalProps {
   record: MedicalRecord | null;
@@ -37,6 +38,60 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
       loadPatientDetails();
     }
   }, [record, isOpen]);
+
+  // Real-time updates for medical records
+  useEffect(() => {
+    if (!record?.patient_id || !isOpen) return;
+
+    const channel = supabase
+      .channel('patient-details-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'medical_records',
+          filter: `patient_id=eq.${record.patient_id}`
+        },
+        (payload) => {
+          console.log('Medical record change detected:', payload);
+          // Reload patient details when any medical record for this patient changes
+          loadPatientDetails();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [record?.patient_id, isOpen]);
+
+  // Also listen for patient updates
+  useEffect(() => {
+    if (!record?.patient_id || !isOpen) return;
+
+    const channel = supabase
+      .channel('patient-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patients',
+          filter: `id=eq.${record.patient_id}`
+        },
+        (payload) => {
+          console.log('Patient change detected:', payload);
+          // Reload patient details when patient info changes
+          loadPatientDetails();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [record?.patient_id, isOpen]);
 
   const loadPatientDetails = async () => {
     if (!record?.patient_id) return;
