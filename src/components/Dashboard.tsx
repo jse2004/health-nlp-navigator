@@ -7,6 +7,7 @@ import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
 import InsightCard from './InsightCard';
 import MedicalRecordAnalysis from './MedicalRecordAnalysis';
+import PatientDetailsModal from './PatientDetailsModal';
 import NewNLPAnalysis from './NewNLPAnalysis';
 import SearchBar from './SearchBar';
 import { toast } from 'sonner';
@@ -16,6 +17,7 @@ import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, deletePatient,
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
@@ -417,7 +419,7 @@ const Dashboard: React.FC = () => {
                             className="text-blue-600 hover:text-blue-800 mr-2"
                             onClick={() => {
                               setSelectedRecord(record);
-                              setIsAnalysisOpen(true);
+                              setIsDetailsOpen(true);
                             }}
                           >
                             Details
@@ -586,6 +588,12 @@ const Dashboard: React.FC = () => {
         isOpen={isAnalysisOpen}
         onClose={() => setIsAnalysisOpen(false)}
         onSaved={loadData}
+      />
+
+      <PatientDetailsModal 
+        record={selectedRecord}
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
       />
 
       <NewNLPAnalysis
