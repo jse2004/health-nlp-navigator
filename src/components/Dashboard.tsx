@@ -12,7 +12,7 @@ import NewNLPAnalysis from './NewNLPAnalysis';
 import SearchBar from './SearchBar';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, deletePatient, getAnalyticsData } from '@/services/dataService';
+import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, deletePatient, getAnalyticsData, downloadEnhancedRecordsCSV } from '@/services/dataService';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
@@ -235,35 +235,11 @@ const Dashboard: React.FC = () => {
     setSearchQuery(query);
   };
 
-  // Function to download all records as CSV
-  const downloadAllRecords = () => {
+  // Function to download all records as enhanced CSV with college departments and visit history
+  const downloadAllRecords = async () => {
     try {
-      let csvContent = "data:text/csv;charset=utf-8,";
-      
-      csvContent += "ID,Date,Patient Name,Severity,Diagnosis,Doctor Notes\n";
-      
-      medicalRecords.forEach(record => {
-        const row = [
-          record.id,
-          new Date(record.date || '').toLocaleDateString(),
-          record.patient_name || "Unknown",
-          record.severity || 0,
-          record.diagnosis || "No diagnosis",
-          (record.doctor_notes || "").replace(/,/g, ";")
-        ];
-        csvContent += row.join(",") + "\n";
-      });
-      
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `medical_records_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success("Records downloaded successfully");
+      await downloadEnhancedRecordsCSV();
+      toast.success("Enhanced records with department analytics downloaded successfully");
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Failed to download records");

@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { saveMedicalRecord } from '@/services/dataService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CollegeDepartment, collegeDepartmentNames } from '@/data/sampleData';
 
 interface NewNLPAnalysisProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ interface StudentRecord {
   studentName: string;
   studentId: string;
   courseYear: string;
+  collegeDepartment: CollegeDepartment | '';
   symptoms: string;
   diagnosis: string;
   medication: string;
@@ -45,6 +48,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
       studentName: '',
       studentId: '',
       courseYear: '',
+      collegeDepartment: '',
       symptoms: '',
       diagnosis: '',
       medication: ''
@@ -141,7 +145,16 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
         notes: data.medication || 'No medication prescribed',
         severity: analysisResult?.severity || 5,
         date: new Date().toISOString(),
-        recommended_actions: recommendedActions
+        recommended_actions: recommendedActions,
+        // Include patient data with college department
+        patient_data: {
+          name: data.studentName,
+          student_id: data.studentId,
+          course_year: data.courseYear,
+          college_department: data.collegeDepartment || undefined,
+          age: 20, // Default age for students
+          gender: 'Other' as const // Default gender
+        }
       };
 
       console.log('Prepared record for saving:', newRecord);
@@ -232,6 +245,30 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
                           <FormControl>
                             <Input placeholder="e.g., BSN-3" {...field} />
                           </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="collegeDepartment"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>College Department</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select college department" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Object.entries(collegeDepartmentNames).map(([code, name]) => (
+                                <SelectItem key={code} value={code}>
+                                  {name} ({code})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormItem>
                       )}
                     />
