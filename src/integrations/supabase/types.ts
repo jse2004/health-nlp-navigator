@@ -150,6 +150,9 @@ export type Database = {
       patients: {
         Row: {
           age: number
+          college_department:
+            | Database["public"]["Enums"]["college_department"]
+            | null
           condition: string | null
           created_at: string | null
           gender: string
@@ -162,6 +165,9 @@ export type Database = {
         }
         Insert: {
           age: number
+          college_department?:
+            | Database["public"]["Enums"]["college_department"]
+            | null
           condition?: string | null
           created_at?: string | null
           gender: string
@@ -174,6 +180,9 @@ export type Database = {
         }
         Update: {
           age?: number
+          college_department?:
+            | Database["public"]["Enums"]["college_department"]
+            | null
           condition?: string | null
           created_at?: string | null
           gender?: string
@@ -212,7 +221,31 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      case_analytics_by_department: {
+        Row: {
+          case_count: number | null
+          college_department:
+            | Database["public"]["Enums"]["college_department"]
+            | null
+          diagnosis: string | null
+          month: string | null
+        }
+        Relationships: []
+      }
+      monthly_visit_analytics: {
+        Row: {
+          college_department:
+            | Database["public"]["Enums"]["college_department"]
+            | null
+          critical_cases: number | null
+          mild_cases: number | null
+          moderate_cases: number | null
+          month: string | null
+          total_visits: number | null
+          unique_patients: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
@@ -232,6 +265,7 @@ export type Database = {
       }
     }
     Enums: {
+      college_department: "CED" | "CCS" | "CCJ" | "CHS" | "CAS" | "CBA"
       staff_role: "admin" | "doctor" | "nurse" | "receptionist" | "technician"
     }
     CompositeTypes: {
@@ -360,6 +394,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      college_department: ["CED", "CCS", "CCJ", "CHS", "CAS", "CBA"],
       staff_role: ["admin", "doctor", "nurse", "receptionist", "technician"],
     },
   },
