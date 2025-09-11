@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye } from 'lucide-react';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -20,6 +20,8 @@ const Dashboard: React.FC = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
+  const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<MedicalRecord | null>(null);
+  const [isRecordDetailsOpen, setIsRecordDetailsOpen] = useState(false);
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
@@ -659,32 +661,46 @@ const Dashboard: React.FC = () => {
                             <span className="ml-2 text-xs text-gray-500 dark:text-gray-300">{record.severity || 0}/10</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-medical-primary mr-2"
-                            onClick={() => {
-                              setSelectedRecord(record);
-                              setIsAnalysisOpen(true);
-                              setIsViewAllOpen(false);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              handleDeleteAnalysis(record.id);
-                              if (medicalRecords.length === 1) {
+                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-blue-600 hover:text-blue-800"
+                              onClick={() => {
+                                setSelectedRecordForDetails(record);
+                                setIsRecordDetailsOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Details
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-medical-primary"
+                              onClick={() => {
+                                setSelectedRecord(record);
+                                setIsAnalysisOpen(true);
                                 setIsViewAllOpen(false);
-                              }
-                            }}
-                          >
-                            Delete
-                          </Button>
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-destructive"
+                              onClick={() => {
+                                handleDeleteAnalysis(record.id);
+                                if (medicalRecords.length === 1) {
+                                  setIsViewAllOpen(false);
+                                }
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -703,6 +719,13 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {/* Patient Details Modal for Records */}
+      <PatientDetailsModal
+        record={selectedRecordForDetails}
+        isOpen={isRecordDetailsOpen}
+        onClose={() => setIsRecordDetailsOpen(false)}
+      />
     </div>
   );
 };

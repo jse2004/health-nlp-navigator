@@ -717,6 +717,8 @@ export const fetchCaseAnalyticsByDepartment = async (): Promise<CaseAnalyticsByD
   }
 };
 
+import * as XLSX from 'xlsx';
+
 // Enhanced Excel Export with College Department and Visit History
 export const downloadEnhancedRecordsCSV = async () => {
   try {
@@ -727,7 +729,7 @@ export const downloadEnhancedRecordsCSV = async () => {
       .order('created_at', { ascending: false });
 
     if (patientsError) {
-      console.error('Error fetching patients for CSV:', patientsError);
+      console.error('Error fetching patients for Excel:', patientsError);
       throw patientsError;
     }
 
@@ -738,12 +740,12 @@ export const downloadEnhancedRecordsCSV = async () => {
       .order('date', { ascending: false });
 
     if (recordsError) {
-      console.error('Error fetching medical records for CSV:', recordsError);
+      console.error('Error fetching medical records for Excel:', recordsError);
       throw recordsError;
     }
 
-    // Create comprehensive CSV with full visit history
-    let csvContent = "data:text/csv;charset=utf-8,";
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
     
     // Enhanced headers including college department and visit history
     const headers = [
@@ -766,8 +768,6 @@ export const downloadEnhancedRecordsCSV = async () => {
       "Created Date",
       "Updated Date"
     ];
-    
-    csvContent += headers.join(",") + "\n";
 
     // Group records by patient to track visit history
     const recordsByPatient = records?.reduce((acc, record) => {
@@ -779,7 +779,7 @@ export const downloadEnhancedRecordsCSV = async () => {
     }, {} as Record<string, typeof records>) || {};
 
     // Process each record with enhanced information
-    records?.forEach((record, index) => {
+    const data = records?.map((record) => {
       const patient = patients?.find(p => p.id === record.patient_id);
       const patientRecords = recordsByPatient[record.patient_id] || [];
       const visitNumber = patientRecords.length - patientRecords.findIndex(r => r.id === record.id);
@@ -796,9 +796,9 @@ export const downloadEnhancedRecordsCSV = async () => {
         daysSinceLastVisit = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
       }
 
-      const row = [
+      return [
         patient?.id || "Unknown",
-        (patient?.name || "Unknown").replace(/,/g, ";"),
+        patient?.name || "Unknown",
         patient?.college_department ? collegeDepartmentNames[patient.college_department] : "Not Specified",
         patient?.age || "Unknown",
         patient?.gender || "Unknown",
@@ -806,26 +806,71 @@ export const downloadEnhancedRecordsCSV = async () => {
         record.date ? new Date(record.date).toLocaleDateString() : "Unknown",
         record.status || "active",
         record.severity || 0,
-        (record.diagnosis || "No diagnosis").replace(/,/g, ";"),
-        (record.notes || record.doctor_notes || "").replace(/,/g, ";"),
-        (record.doctor_notes || "").replace(/,/g, ";"),
+        record.diagnosis || "No diagnosis",
+        record.notes || record.doctor_notes || "",
+        record.doctor_notes || "",
         Array.isArray(record.recommended_actions) 
           ? record.recommended_actions.join("; ") 
-          : String(record.recommended_actions || "").replace(/,/g, ";"),
+          : String(record.recommended_actions || ""),
         visitNumber,
         totalVisits,
         daysSinceLastVisit,
         record.created_at ? new Date(record.created_at).toLocaleDateString() : "Unknown",
         record.updated_at ? new Date(record.updated_at).toLocaleDateString() : "Unknown"
       ];
-      csvContent += row.join(",") + "\n";
-    });
+    }) || [];
 
-    // Add department summary section
-    csvContent += "\n\n--- DEPARTMENT SUMMARY ---\n";
-    csvContent += "College Department,Total Patients,Active Patients,Total Visits,Average Age\n";
-    
-    // Calculate department statistics
+    // Create the main worksheet with headers and data
+    const wsData = [headers, ...data];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Set column widths for better readability
+    const columnWidths = [
+      { wch: 15 }, // Patient ID
+      { wch: 20 }, // Patient Name
+      { wch: 25 }, // College Department
+      { wch: 8 },  // Age
+      { wch: 10 }, // Gender
+      { wch: 15 }, // Record ID
+      { wch: 12 }, // Visit Date
+      { wch: 18 }, // Status
+      { wch: 10 }, // Severity
+      { wch: 30 }, // Diagnosis
+      { wch: 40 }, // Symptoms/Notes
+      { wch: 40 }, // Doctor Notes
+      { wch: 30 }, // Recommended Actions
+      { wch: 12 }, // Visit Number
+      { wch: 15 }, // Total Visits
+      { wch: 18 }, // Days Since Last Visit
+      { wch: 15 }, // Created Date
+      { wch: 15 }  // Updated Date
+    ];
+    ws['!cols'] = columnWidths;
+
+    // Style the header row - make it bold and add background color
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "366092" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      }
+    };
+
+    // Apply header styling
+    for (let i = 0; i < headers.length; i++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (!ws[cellAddress]) ws[cellAddress] = {};
+      ws[cellAddress].s = headerStyle;
+    }
+
+    // Add the main worksheet
+    XLSX.utils.book_append_sheet(wb, ws, "Medical Records");
+
+    // Create Department Summary worksheet
     const departmentStats = patients?.reduce((acc, patient) => {
       const dept = patient.college_department || 'Not Specified';
       if (!acc[dept]) {
@@ -843,18 +888,34 @@ export const downloadEnhancedRecordsCSV = async () => {
       return acc;
     }, {} as Record<string, any>) || {};
 
-    // Add department statistics to CSV
-    Object.entries(departmentStats).forEach(([dept, stats]) => {
+    const deptHeaders = ["College Department", "Total Patients", "Active Patients", "Total Visits", "Average Age"];
+    const deptData = Object.entries(departmentStats).map(([dept, stats]) => {
       const avgAge = stats.totalPatients > 0 ? (stats.totalAge / stats.totalPatients).toFixed(1) : '0';
       const deptName = dept !== 'Not Specified' ? collegeDepartmentNames[dept as CollegeDepartment] || dept : dept;
-      csvContent += `${deptName},${stats.totalPatients},${stats.activePatients},${stats.totalVisits},${avgAge}\n`;
+      return [deptName, stats.totalPatients, stats.activePatients, stats.totalVisits, avgAge];
     });
 
-    // Add monthly summary
-    csvContent += "\n\n--- MONTHLY VISIT SUMMARY ---\n";
-    csvContent += "Month,Total Visits,Unique Patients,Critical Cases,Moderate Cases,Mild Cases\n";
+    const deptWsData = [deptHeaders, ...deptData];
+    const deptWs = XLSX.utils.aoa_to_sheet(deptWsData);
     
-    // Calculate monthly statistics from records
+    // Style department summary headers
+    for (let i = 0; i < deptHeaders.length; i++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (!deptWs[cellAddress]) deptWs[cellAddress] = {};
+      deptWs[cellAddress].s = headerStyle;
+    }
+
+    deptWs['!cols'] = [
+      { wch: 30 }, // College Department
+      { wch: 15 }, // Total Patients
+      { wch: 15 }, // Active Patients
+      { wch: 15 }, // Total Visits
+      { wch: 15 }  // Average Age
+    ];
+
+    XLSX.utils.book_append_sheet(wb, deptWs, "Department Summary");
+
+    // Create Monthly Summary worksheet
     const monthlyStats = records?.reduce((acc, record) => {
       const month = new Date(record.date).toISOString().substring(0, 7); // YYYY-MM format
       if (!acc[month]) {
@@ -877,26 +938,46 @@ export const downloadEnhancedRecordsCSV = async () => {
       return acc;
     }, {} as Record<string, any>) || {};
 
-    // Sort months and add to CSV
-    Object.entries(monthlyStats)
+    const monthlyHeaders = ["Month", "Total Visits", "Unique Patients", "Critical Cases", "Moderate Cases", "Mild Cases"];
+    const monthlyData = Object.entries(monthlyStats)
       .sort(([a], [b]) => b.localeCompare(a))
-      .forEach(([month, stats]) => {
-        csvContent += `${month},${stats.totalVisits},${stats.uniquePatients.size},${stats.critical},${stats.moderate},${stats.mild}\n`;
-      });
+      .map(([month, stats]) => [
+        month,
+        stats.totalVisits,
+        stats.uniquePatients.size,
+        stats.critical,
+        stats.moderate,
+        stats.mild
+      ]);
 
-    // Download the enhanced CSV
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `enhanced_medical_records_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    
-    link.click();
-    document.body.removeChild(link);
+    const monthlyWsData = [monthlyHeaders, ...monthlyData];
+    const monthlyWs = XLSX.utils.aoa_to_sheet(monthlyWsData);
+
+    // Style monthly summary headers
+    for (let i = 0; i < monthlyHeaders.length; i++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (!monthlyWs[cellAddress]) monthlyWs[cellAddress] = {};
+      monthlyWs[cellAddress].s = headerStyle;
+    }
+
+    monthlyWs['!cols'] = [
+      { wch: 12 }, // Month
+      { wch: 15 }, // Total Visits
+      { wch: 18 }, // Unique Patients
+      { wch: 15 }, // Critical Cases
+      { wch: 18 }, // Moderate Cases
+      { wch: 15 }  // Mild Cases
+    ];
+
+    XLSX.utils.book_append_sheet(wb, monthlyWs, "Monthly Summary");
+
+    // Generate and download the Excel file
+    const fileName = `enhanced_medical_records_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
     
     return true;
   } catch (error) {
-    console.error('Error downloading enhanced CSV:', error);
+    console.error('Error downloading enhanced Excel:', error);
     throw error;
   }
 };
