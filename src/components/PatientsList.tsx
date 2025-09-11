@@ -1,9 +1,11 @@
 
-import React from 'react';
-import { Patient } from '@/data/sampleData';
+import React, { useState } from 'react';
+import { Patient, MedicalRecord } from '@/data/sampleData';
 import PatientCard from './PatientCard';
+import PatientDetailsModal from './PatientDetailsModal';
 import { Button } from '@/components/ui/button';
 import { UserPlus } from 'lucide-react';
+import { fetchMedicalRecords } from '@/services/dataService';
 
 interface PatientsListProps {
   patients: Patient[];
@@ -12,6 +14,40 @@ interface PatientsListProps {
 }
 
 const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, isLoading = false }) => {
+  const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  const handleDetailsClick = async (patient: Patient) => {
+    try {
+      // Fetch the most recent medical record for this patient
+      const records = await fetchMedicalRecords('', patient.id, true);
+      if (records.length > 0) {
+        // Sort by date to get the most recent record
+        const sortedRecords = records.sort((a, b) => 
+          new Date(b.date || '').getTime() - new Date(a.date || '').getTime()
+        );
+        setSelectedRecord(sortedRecords[0]);
+        setIsDetailsOpen(true);
+      } else {
+        // Create a dummy record if none exists
+        const dummyRecord: MedicalRecord = {
+          id: `temp-${patient.id}`,
+          patient_id: patient.id,
+          patient_name: patient.name,
+          diagnosis: 'No diagnosis available',
+          doctor_notes: 'No medical records found for this patient',
+          notes: '',
+          severity: 0,
+          date: new Date().toISOString(),
+          recommended_actions: []
+        };
+        setSelectedRecord(dummyRecord);
+        setIsDetailsOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching patient records:', error);
+    }
+  };
   if (isLoading) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -40,6 +76,7 @@ const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, 
               key={patient.id} 
               patient={patient} 
               onClick={onSelectPatient}
+              onDetailsClick={handleDetailsClick}
             />
           ))}
         </div>
@@ -52,6 +89,12 @@ const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, 
           </p>
         </div>
       )}
+      
+      <PatientDetailsModal
+        record={selectedRecord}
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+      />
     </div>
   );
 };

@@ -3,14 +3,15 @@ import React from 'react';
 import { Patient } from '@/data/sampleData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { User } from 'lucide-react';
+import { User, Eye } from 'lucide-react';
 
 interface PatientCardProps {
   patient: Patient;
   onClick?: (patient: Patient) => void;
+  onDetailsClick?: (patient: Patient) => void;
 }
 
-const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
+const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick, onDetailsClick }) => {
   // Function to get badge color based on status
   const getStatusBadgeClass = () => {
     switch (patient.status) {
@@ -62,9 +63,14 @@ const PatientCard: React.FC<PatientCardProps> = ({ patient, onClick }) => {
         <Button 
           variant="ghost" 
           size="sm" 
-          className="text-xs text-medical-primary hover:text-medical-accent"
+          className="text-xs text-medical-primary hover:text-medical-accent flex items-center gap-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDetailsClick?.(patient);
+          }}
         >
-          View Records
+          <Eye className="h-3 w-3" />
+          Details
         </Button>
       </CardFooter>
     </Card>

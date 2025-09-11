@@ -32,6 +32,7 @@ interface StudentRecord {
   studentName: string;
   studentId: string;
   courseYear: string;
+  age: string;
   collegeDepartment: CollegeDepartment | '';
   symptoms: string;
   diagnosis: string;
@@ -48,6 +49,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
       studentName: '',
       studentId: '',
       courseYear: '',
+      age: '',
       collegeDepartment: '',
       symptoms: '',
       diagnosis: '',
@@ -124,8 +126,8 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
   };
 
   const handleSaveAnalysis = async (data: StudentRecord) => {
-    if (!data.studentName || !data.symptoms) {
-      toast.error('Please enter student name and symptoms');
+    if (!data.studentName || !data.symptoms || !data.age) {
+      toast.error('Please enter student name, age, and symptoms');
       return;
     }
 
@@ -152,7 +154,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
           student_id: data.studentId,
           course_year: data.courseYear,
           college_department: data.collegeDepartment || undefined,
-          age: 20, // Default age for students
+          age: parseInt(data.age) || 20,
           gender: 'Other' as const // Default gender
         }
       };
@@ -244,6 +246,25 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
                           <FormLabel>Course & Year</FormLabel>
                           <FormControl>
                             <Input placeholder="e.g., BSN-3" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="age"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Age</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Enter age" 
+                              min="1" 
+                              max="120" 
+                              {...field} 
+                            />
                           </FormControl>
                         </FormItem>
                       )}
