@@ -1,0 +1,47 @@
+
+[
+  {
+    "diagnosis": "Hypertension",
+    "indicators": ["high blood pressure", "hypertensive"],
+    "minMatches": 1
+  },
+  {
+    "diagnosis": "Type 2 Diabetes",
+    "indicators": ["high blood sugar", "diabetic", "A1c"],
+    "minMatches": 1
+  },
+  {
+    "diagnosis": "Asthma",
+    "indicators": ["asthma", "wheezing", "shortness of breath"],
+    "minMatches": 1
+  },
+  {
+    "diagnosis": "Anemia",
+    "indicators": ["anemia", "low hemoglobin", "low iron"],
+    "minMatches": 1
+  },
+  {
+    "diagnosis": "Depression",
+    "indicators": [
+      "depression",
+      "depressed mood",
+      "sad",
+      "loss of interest",
+      "anhedonia",
+      "sleep disturbance.*mood",
+      "fatigue.*hopeless"
+    ],
+    "minMatches": 1
+  },
+  {
+    "diagnosis": "Gastroesophageal Reflux Disease (GERD)",
+    "indicators": [
+      "heartburn",
+      "acid reflux",
+      "gerd",
+      "chest burning.*eating",
+      "regurgitation.*sour taste"
+    ],
+    "minMatches": 1
+  }
+]
