@@ -366,57 +366,148 @@ const Dashboard: React.FC = () => {
       <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={loadData} />
       
       {isViewAllOpen && 
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-card w-full max-w-7xl h-full max-h-[90vh] rounded-lg p-6 flex flex-col shadow-2xl">
-            <div className="flex justify-between items-center mb-4 pb-4 border-b">
-              <h2 className="text-2xl font-bold">All Medical Records</h2>
-              <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={downloadAllRecords} className="flex items-center gap-1"><Download className="h-4 w-4" />Download All</Button>
-                  <Button variant="ghost" size="icon" onClick={() => setIsViewAllOpen(false)}><Info className="h-5 w-5" /></Button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border/50 w-full max-w-7xl h-full max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-8 pb-6 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight text-card-foreground">All Medical Records</h2>
+                <p className="text-muted-foreground mt-2">Complete overview of all patient medical records</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="px-3 py-1.5 text-sm">
+                  {medicalRecords.length} Total Records
+                </Badge>
+                <Button variant="outline" size="sm" onClick={downloadAllRecords} className="flex items-center gap-2 hover:bg-accent/50">
+                  <Download className="h-4 w-4" />
+                  Download All
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setIsViewAllOpen(false)} className="hover:bg-accent/50">
+                  <Info className="h-5 w-5" />
+                </Button>
               </div>
             </div>
-            <div className="overflow-auto flex-grow">
+            
+            <div className="overflow-auto flex-grow bg-card">
               {medicalRecords.length > 0 ? (
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-muted/50 sticky top-0">
-                        <tr>
-                          <th className="th-cell">Record ID</th>
-                          <th className="th-cell">Date</th>
-                          <th className="th-cell">Student Name</th>
-                          <th className="th-cell">Diagnosis</th>
-                          <th className="th-cell">Severity</th>
-                          <th className="th-cell">Actions</th>
-                        </tr>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-muted/30 backdrop-blur-sm sticky top-0 z-10">
+                      <tr className="border-b border-border/30">
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Record ID</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Date</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Student Name</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Diagnosis</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Severity</th>
+                        <th className="px-8 py-5 text-center text-sm font-semibold text-card-foreground tracking-wider uppercase">Actions</th>
+                      </tr>
                     </thead>
-                    <tbody className="bg-card divide-y divide-border">
-                        {medicalRecords.map((record) => (
-                          <tr key={record.id} className="hover:bg-muted/50">
-                            <td className="td-cell font-mono text-xs">{record.id.substring(0, 8)}...</td>
-                            <td className="td-cell">{new Date(record.date || '').toLocaleDateString()}</td>
-                            <td className="td-cell">{record.patient_name || "N/A"}</td>
-                            <td className="td-cell max-w-xs truncate">{record.diagnosis || "No diagnosis"}</td>
-                            <td className="td-cell">
-                              <div className="flex items-center gap-2">
-                                  <div className="h-2 w-16 bg-muted rounded-full"><div className={`h-full rounded-full ${record.severity >= 8 ? 'bg-destructive' : record.severity >= 5 ? 'bg-yellow-400' : 'bg-green-500'}`} style={{ width: `${(record.severity / 10) * 100}%` }}></div></div>
-                                  <span className="text-xs text-muted-foreground">{record.severity}/10</span>
+                    <tbody className="bg-card divide-y divide-border/20">
+                      {medicalRecords.map((record, index) => (
+                        <tr key={record.id} className="hover:bg-muted/20 transition-all duration-200">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center">
+                              <span className="font-mono text-sm text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-md border border-border/30">
+                                {record.id.substring(0, 8)}...
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-card-foreground">
+                                {new Date(record.date || "").toLocaleDateString()}
                               </div>
-                            </td>
-                            <td className="td-cell">
-                              <div className="flex gap-1">
-                                  <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}><Eye className="h-4 w-4 mr-1" />Details</Button>
-                                  <Button variant="ghost" size="sm" onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); setIsViewAllOpen(false); }}>Edit</Button>
-                                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => { handleDeleteAnalysis(record.id); if (medicalRecords.length === 1) setIsViewAllOpen(false); }}>Delete</Button>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(record.date || "").toLocaleTimeString([], {hour: "2-digit", minute:"2-digit"})}
                               </div>
-                            </td>
-                          </tr>
-                        ))}
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-card-foreground">
+                                {record.patient_name || "N/A"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Patient #{index + 1}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="max-w-xs">
+                              <div className="text-sm font-medium text-card-foreground truncate" title={record.diagnosis || "No diagnosis"}>
+                                {record.diagnosis || "No diagnosis"}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {record.diagnosis ? "Confirmed" : "Pending evaluation"}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1">
+                                <div className="h-3 w-24 bg-muted/50 rounded-full overflow-hidden border border-border/30">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-300 ${
+                                      record.severity >= 8 ? "bg-destructive" : 
+                                      record.severity >= 5 ? "bg-yellow-500" : "bg-green-500"
+                                    }`} 
+                                    style={{ width: `${(record.severity / 10) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <span className={`text-sm font-semibold px-2.5 py-1 rounded-full border ${
+                                record.severity >= 8 ? "text-destructive bg-destructive/10 border-destructive/20" : 
+                                record.severity >= 5 ? "text-yellow-600 bg-yellow-100 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-800/30" : 
+                                "text-green-600 bg-green-100 border-green-200 dark:text-green-400 dark:bg-green-900/20 dark:border-green-800/30"
+                              }`}>
+                                {record.severity}/10
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary hover:text-primary/80 hover:bg-primary/10 border border-transparent hover:border-primary/20" 
+                                onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Details
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-muted-foreground hover:text-card-foreground hover:bg-muted/30 border border-transparent hover:border-border/50" 
+                                onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); setIsViewAllOpen(false); }}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 border border-transparent hover:border-destructive/20" 
+                                onClick={() => { handleDeleteAnalysis(record.id); if (medicalRecords.length === 1) setIsViewAllOpen(false); }}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
+                </div>
               ) : (
-                <div className="text-center py-16">
-                  <FileText className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold">No Medical Records Found</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto mt-2">Create a new medical record to get started.</p>
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center py-16 max-w-md">
+                    <FileText className="h-24 w-24 text-muted-foreground/30 mx-auto mb-6" />
+                    <h3 className="text-2xl font-semibold text-card-foreground mb-4">No Medical Records Found</h3>
+                    <p className="text-muted-foreground mb-8">There are currently no medical records in the system. Create your first record to get started.</p>
+                    <Button onClick={() => { setIsViewAllOpen(false); handleNewAnalysis(); }} size="lg" className="gap-2">
+                      <FileText className="h-5 w-5" />
+                      Create First Record
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
