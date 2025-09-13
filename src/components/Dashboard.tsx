@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
           <Button variant="ghost" size="sm" className="text-primary flex items-center gap-1" onClick={() => setIsViewAllOpen(true)}>View All<ArrowUpRight className="h-4 w-4" /></Button>
         </div>
 
-        <TabsContent value="patients"><PatientsList patients={patients} onSelectPatient={handleViewPatientRecord} isLoading={isLoading} /></TabsContent>
+        <TabsContent value="patients"><PatientsList patients={patients} onSelectPatient={(patient) => handleViewPatientRecord(patient.id)} isLoading={isLoading} /></TabsContent>
 
         <TabsContent value="insights">
           {realInsights.length > 0 ? (
@@ -186,50 +186,132 @@ const Dashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="records">
-          <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
-            <h2 className="text-lg font-semibold mb-4">Recent Medical Records</h2>
-            {isLoading ? <p className="text-center py-8 text-muted-foreground">Loading records...</p> : medicalRecords.length > 0 ? (
+          <div className="bg-card text-card-foreground p-8 rounded-xl shadow-sm border border-border/50">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Recent Medical Records</h2>
+                <p className="text-muted-foreground mt-2">Latest patient records and analysis data</p>
+              </div>
+              <Badge variant="secondary" className="px-3 py-1">
+                {medicalRecords.length} Records
+              </Badge>
+            </div>
+            
+            {isLoading ? (
+              <div className="text-center py-16">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-muted rounded w-1/4 mx-auto mb-4"></div>
+                  <div className="h-4 bg-muted rounded w-1/3 mx-auto"></div>
+                </div>
+                <p className="text-muted-foreground mt-4">Loading records...</p>
+              </div>
+            ) : medicalRecords.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="th-cell">Record ID</th>
-                      <th className="th-cell">Date</th>
-                      <th className="th-cell">Student Name</th>
-                      <th className="th-cell">Severity</th>
-                      <th className="th-cell">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {medicalRecords.slice(0, 5).map(record => (
-                      <tr key={record.id} className="hover:bg-muted/50">
-                        <td className="td-cell font-mono text-xs">{record.id.substring(0, 8)}...</td>
-                        <td className="td-cell">{new Date(record.date || '').toLocaleDateString()}</td>
-                        <td className="td-cell">{record.patient_name || "N/A"}</td>
-                        <td className="td-cell">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-16 bg-muted rounded-full"><div className={`h-full rounded-full ${record.severity >= 8 ? 'bg-destructive' : record.severity >= 5 ? 'bg-yellow-400' : 'bg-green-500'}`} style={{ width: `${(record.severity / 10) * 100}%` }} /></div>
-                            <span className="text-xs text-muted-foreground">{record.severity}/10</span>
-                          </div>
-                        </td>
-                        <td className="td-cell">
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" className="text-primary" onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}><Eye className="h-4 w-4 mr-1" />Details</Button>
-                            <Button variant="ghost" size="sm" onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}>Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAnalysis(record.id)}>Delete</Button>
-                          </div>
-                        </td>
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full divide-y divide-border/50">
+                    <thead>
+                      <tr className="bg-muted/30">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Record ID</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Date</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Student Name</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Severity</th>
+                        <th className="px-6 py-4 text-center text-sm font-semibold text-foreground tracking-wider">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {medicalRecords.slice(0, 5).map((record, index) => (
+                        <tr key={record.id} className="hover:bg-muted/20 transition-colors duration-150">
+                          <td className="px-6 py-5">
+                            <div className="flex items-center">
+                              <span className="font-mono text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                                {record.id.substring(0, 8)}...
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="text-sm font-medium text-foreground">
+                              {new Date(record.date || '').toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(record.date || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="text-sm font-medium text-foreground">
+                              {record.patient_name || "N/A"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Patient #{index + 1}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <div className="h-2.5 w-20 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-300 ${
+                                      record.severity >= 8 ? 'bg-destructive' : 
+                                      record.severity >= 5 ? 'bg-yellow-500' : 'bg-green-500'
+                                    }`} 
+                                    style={{ width: `${(record.severity / 10) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                                record.severity >= 8 ? 'text-destructive bg-destructive/10' : 
+                                record.severity >= 5 ? 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/20' : 
+                                'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20'
+                              }`}>
+                                {record.severity}/10
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary hover:text-primary/80 hover:bg-primary/10" 
+                                onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Details
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-muted-foreground hover:text-foreground hover:bg-muted/50" 
+                                onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10" 
+                                onClick={() => handleDeleteAnalysis(record.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
-              <div className="text-center py-16">
-                <FileText className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold">No Medical Records Found</h3>
-                <p className="text-muted-foreground max-w-md mx-auto mt-2">Create a new medical record to get started.</p>
-                <Button onClick={handleNewAnalysis} className="mt-6"><FileText className="h-4 w-4 mr-2" />Create First Record</Button>
+              <div className="text-center py-20">
+                <div className="max-w-md mx-auto">
+                  <FileText className="h-20 w-20 text-muted-foreground/30 mx-auto mb-6" />
+                  <h3 className="text-2xl font-semibold text-foreground mb-3">No Medical Records Found</h3>
+                  <p className="text-muted-foreground mb-8">Create a new medical record to get started with patient management.</p>
+                  <Button onClick={handleNewAnalysis} size="lg" className="gap-2">
+                    <FileText className="h-5 w-5" />
+                    Create First Record
+                  </Button>
+                </div>
               </div>
             )}
           </div>
