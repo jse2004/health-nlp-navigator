@@ -13,6 +13,7 @@ import SearchBar from './SearchBar';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, getAnalyticsData, downloadEnhancedRecordsCSV } from '@/services/dataService';
+import AppointmentScheduler from './AppointmentScheduler';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Dashboard: React.FC = () => {
@@ -461,7 +462,9 @@ const Dashboard: React.FC = () => {
                               }`}>
                                 {record.severity}/10
                               </span>
-                            </div>
+                               </span>
+                               </span>
+                             </div>
                           </td>
                           <td className="px-8 py-6">
                             <div className="flex items-center justify-center gap-2">
@@ -515,6 +518,7 @@ const Dashboard: React.FC = () => {
         </div>
       }
       
+      <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={handleAnalysisSaved} />
       <PatientDetailsModal record={selectedRecordForDetails} isOpen={isRecordDetailsOpen} onClose={() => setIsRecordDetailsOpen(false)} />
     </div>
   );

@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_date: string
+          appointment_type: string
+          created_at: string
+          doctor_id: string | null
+          duration_minutes: number
+          id: string
+          notes: string | null
+          patient_id: string
+          reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          appointment_type?: string
+          created_at?: string
+          doctor_id?: string | null
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          patient_id: string
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          appointment_type?: string
+          created_at?: string
+          doctor_id?: string | null
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doctor_schedules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          doctor_id: string
+          end_time: string
+          id: string
+          is_available: boolean
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          doctor_id: string
+          end_time: string
+          id?: string
+          is_available?: boolean
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          doctor_id?: string
+          end_time?: string
+          id?: string
+          is_available?: boolean
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       medical_certificates: {
         Row: {
           certificate_number: string
@@ -112,6 +187,96 @@ export type Database = {
           },
         ]
       }
+      medication_prescriptions: {
+        Row: {
+          created_at: string
+          dosage: string
+          duration_days: number | null
+          end_date: string | null
+          frequency: string
+          id: string
+          instructions: string | null
+          medical_record_id: string | null
+          medication_name: string
+          patient_id: string
+          prescribed_by: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dosage: string
+          duration_days?: number | null
+          end_date?: string | null
+          frequency: string
+          id?: string
+          instructions?: string | null
+          medical_record_id?: string | null
+          medication_name: string
+          patient_id: string
+          prescribed_by?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dosage?: string
+          duration_days?: number | null
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          instructions?: string | null
+          medical_record_id?: string | null
+          medication_name?: string
+          patient_id?: string
+          prescribed_by?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      patient_allergies: {
+        Row: {
+          allergen: string
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          onset_date: string | null
+          patient_id: string
+          reaction_description: string | null
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          allergen: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          onset_date?: string | null
+          patient_id: string
+          reaction_description?: string | null
+          severity?: string
+          updated_at?: string
+        }
+        Update: {
+          allergen?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          onset_date?: string | null
+          patient_id?: string
+          reaction_description?: string | null
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patient_assignments: {
         Row: {
           assigned_by: string | null
@@ -146,6 +311,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      patient_vitals: {
+        Row: {
+          blood_glucose: number | null
+          blood_pressure_diastolic: number | null
+          blood_pressure_systolic: number | null
+          created_at: string
+          heart_rate: number | null
+          height_cm: number | null
+          id: string
+          medical_record_id: string | null
+          notes: string | null
+          oxygen_saturation: number | null
+          patient_id: string
+          recorded_at: string
+          recorded_by: string | null
+          respiratory_rate: number | null
+          temperature_celsius: number | null
+          updated_at: string
+          weight_kg: number | null
+        }
+        Insert: {
+          blood_glucose?: number | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          created_at?: string
+          heart_rate?: number | null
+          height_cm?: number | null
+          id?: string
+          medical_record_id?: string | null
+          notes?: string | null
+          oxygen_saturation?: number | null
+          patient_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          respiratory_rate?: number | null
+          temperature_celsius?: number | null
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Update: {
+          blood_glucose?: number | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          created_at?: string
+          heart_rate?: number | null
+          height_cm?: number | null
+          id?: string
+          medical_record_id?: string | null
+          notes?: string | null
+          oxygen_saturation?: number | null
+          patient_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          respiratory_rate?: number | null
+          temperature_celsius?: number | null
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Relationships: []
       }
       patients: {
         Row: {
