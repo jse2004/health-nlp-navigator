@@ -455,14 +455,12 @@ const Dashboard: React.FC = () => {
                                   />
                                 </div>
                               </div>
-                              <span className={`text-sm font-semibold px-2.5 py-1 rounded-full border ${
-                                record.severity >= 8 ? "text-destructive bg-destructive/10 border-destructive/20" : 
-                                record.severity >= 5 ? "text-yellow-600 bg-yellow-100 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-800/30" : 
-                                "text-green-600 bg-green-100 border-green-200 dark:text-green-400 dark:bg-green-900/20 dark:border-green-800/30"
-                              }`}>
-                                {record.severity}/10
-                              </span>
-                               </span>
+                               <span className={`text-sm font-semibold px-2.5 py-1 rounded-full border ${
+                                 record.severity >= 8 ? "text-destructive bg-destructive/10 border-destructive/20" : 
+                                 record.severity >= 5 ? "text-yellow-600 bg-yellow-100 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-800/30" : 
+                                 "text-green-600 bg-green-100 border-green-200 dark:text-green-400 dark:bg-green-900/20 dark:border-green-800/30"
+                               }`}>
+                                 {record.severity}/10
                                </span>
                              </div>
                           </td>
@@ -518,7 +516,7 @@ const Dashboard: React.FC = () => {
         </div>
       }
       
-      <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={handleAnalysisSaved} />
+      <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={loadData} />
       <PatientDetailsModal record={selectedRecordForDetails} isOpen={isRecordDetailsOpen} onClose={() => setIsRecordDetailsOpen(false)} />
     </div>
   );
