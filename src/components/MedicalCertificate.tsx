@@ -1,9 +1,7 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, FileText, Stamp, FileDown } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { Download, FileText, Stamp } from 'lucide-react';
 
 interface MedicalCertificateData {
   id: string;
@@ -27,44 +25,6 @@ const MedicalCertificate: React.FC<MedicalCertificateProps> = ({
   onClose,
   certificateData
 }) => {
-  const certificateRef = useRef<HTMLDivElement>(null);
-
-  const downloadCertificateAsPDF = async () => {
-    if (!certificateRef.current) return;
-
-    try {
-      const canvas = await html2canvas(certificateRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      
-      let position = 0;
-      
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      pdf.save(`Medical_Certificate_${certificateData.certificate_number}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-    }
-  };
-
   const downloadCertificate = () => {
     // Create certificate content
     const certificateContent = `
@@ -141,7 +101,7 @@ For verification, please contact: verify@udmcare.edu
           </DialogTitle>
         </DialogHeader>
         
-        <div ref={certificateRef} className="space-y-6 bg-background p-6 rounded-lg">
+        <div className="space-y-6">
           {/* Certificate Header */}
           <div className="text-center border-b-2 border-primary pb-4">
             <div className="bg-primary/10 rounded-lg p-4 mb-4">
@@ -220,15 +180,11 @@ For verification, please contact: verify@udmcare.edu
             </p>
           </div>
 
-          {/* Download Buttons */}
-          <div className="flex justify-center gap-3 pt-4">
-            <Button onClick={downloadCertificateAsPDF} className="flex items-center gap-2">
-              <FileDown className="h-4 w-4" />
-              Download PDF
-            </Button>
-            <Button onClick={downloadCertificate} variant="outline" className="flex items-center gap-2">
+          {/* Download Button */}
+          <div className="flex justify-center pt-4">
+            <Button onClick={downloadCertificate} className="flex items-center gap-2">
               <Download className="h-4 w-4" />
-              Download Text
+              Download Certificate
             </Button>
           </div>
         </div>

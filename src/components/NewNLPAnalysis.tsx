@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { FileText, Save, User, Stethoscope, Pill, AlertTriangle } from 'lucide-react';
+import { FileText, Save, User, Stethoscope, Pill, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   Form,
@@ -19,8 +19,6 @@ import {
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { saveMedicalRecord } from '@/services/dataService';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CollegeDepartment, collegeDepartmentNames } from '@/data/sampleData';
 
 interface NewNLPAnalysisProps {
   isOpen: boolean;
@@ -32,43 +30,10 @@ interface StudentRecord {
   studentName: string;
   studentId: string;
   courseYear: string;
-  age: string;
-  gender: 'Male' | 'Female' | 'Other' | '';
-  collegeDepartment: CollegeDepartment | '';
   symptoms: string;
   diagnosis: string;
   medication: string;
 }
-
-// Helper to render text with highlighted entities
-const renderHighlightedText = (text: string, entities: any[]) => {
-  if (!entities || entities.length === 0) {
-    return <span>{text}</span>;
-  }
-
-  const sortedEntities = [...entities].sort((a, b) => a.startIndex - b.startIndex);
-
-  let lastIndex = 0;
-  const parts: React.ReactNode[] = [];
-
-  sortedEntities.forEach((entity, i) => {
-    if (entity.startIndex > lastIndex) {
-      parts.push(text.substring(lastIndex, entity.startIndex));
-    }
-    parts.push(
-      <span key={i} className="entity-highlight" data-entity-type={entity.type}>
-        {entity.text}
-      </span>
-    );
-    lastIndex = entity.endIndex;
-  });
-
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
-  }
-
-  return <p className="text-sm leading-relaxed whitespace-pre-wrap">{parts}</p>;
-};
 
 const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSaved }) => {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
@@ -80,9 +45,6 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
       studentName: '',
       studentId: '',
       courseYear: '',
-      age: '',
-      gender: '',
-      collegeDepartment: '',
       symptoms: '',
       diagnosis: '',
       medication: ''
@@ -91,21 +53,29 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
 
   const handleAnalyze = () => {
     const symptoms = form.getValues('symptoms');
+    
     if (!symptoms.trim()) {
       toast.error('Please enter symptoms to analyze');
       return;
     }
+
     setIsAnalyzing(true);
+    
+    // Small timeout to simulate processing
     setTimeout(() => {
       try {
         const result = analyzeMedicalText(symptoms);
         setAnalysisResult(result);
-        if (result.suggestedDiagnosis?.length > 0) {
+        
+        // Auto-fill diagnosis based on NLP analysis
+        if (result.suggestedDiagnosis && result.suggestedDiagnosis.length > 0) {
           form.setValue('diagnosis', result.suggestedDiagnosis.join(', '));
         }
+        
         toast.success('Symptoms analyzed successfully');
       } catch (error) {
         toast.error('Error analyzing symptoms');
+        console.error('Analysis error:', error);
       } finally {
         setIsAnalyzing(false);
       }
@@ -114,51 +84,85 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
 
   const generateRecommendedActions = (analysisResult: any): string[] => {
     const actions: string[] = [];
+    
     if (analysisResult.severity >= 8) {
       actions.push('Seek immediate medical attention');
+      actions.push('Monitor vital signs closely');
     } else if (analysisResult.severity >= 6) {
-      actions.push('Schedule appointment with a healthcare provider');
+      actions.push('Schedule appointment with healthcare provider within 24-48 hours');
+      actions.push('Monitor symptoms for changes');
     } else {
       actions.push('Rest and stay hydrated');
+      actions.push('Monitor symptoms and seek care if worsening');
     }
-    if (analysisResult.entities?.some((e: any) => e.type === 'symptom')) {
-      actions.push('Monitor symptoms for any changes');
+    
+    // Add specific actions based on detected entities
+    if (analysisResult.entities) {
+      const symptoms = analysisResult.entities.filter((e: any) => e.type === 'symptom');
+      const medications = analysisResult.entities.filter((e: any) => e.type === 'medication');
+      
+      if (symptoms.some((s: any) => s.text.toLowerCase().includes('fever'))) {
+        actions.push('Take temperature regularly and maintain fever log');
+      }
+      
+      if (symptoms.some((s: any) => s.text.toLowerCase().includes('pain'))) {
+        actions.push('Apply appropriate pain management techniques');
+      }
+      
+      if (medications.length > 0) {
+        actions.push('Review current medications with healthcare provider');
+      }
     }
+    
+    actions.push('Follow up as needed or if symptoms persist');
+    
     return actions;
   };
 
   const handleSaveAnalysis = async (data: StudentRecord) => {
-    if (!data.studentName || !data.symptoms || !data.age) {
-      toast.error('Please enter student name, age, and symptoms');
+    if (!data.studentName || !data.symptoms) {
+      toast.error('Please enter student name and symptoms');
       return;
     }
+
     setIsSaving(true);
+
     try {
+      console.log('Saving medical record with data:', data);
+      
+      // Generate recommended actions based on analysis
       const recommendedActions = analysisResult ? generateRecommendedActions(analysisResult) : [];
+      
+      // Create a new medical record with proper fields to match the database schema
       const newRecord = {
         patient_name: data.studentName,
-        diagnosis: data.diagnosis || 'Pending evaluation',
+        diagnosis: data.diagnosis || 'Pending further evaluation',
         doctor_notes: data.symptoms,
-        notes: data.medication || 'N/A',
+        notes: data.medication || 'No medication prescribed',
         severity: analysisResult?.severity || 5,
         date: new Date().toISOString(),
-        recommended_actions: recommendedActions,
-        patient_data: {
-          name: data.studentName,
-          student_id: data.studentId,
-          course_year: data.courseYear,
-          college_department: data.collegeDepartment || undefined,
-          age: parseInt(data.age) || 0,
-          gender: data.gender || 'Other'
-        }
+        recommended_actions: recommendedActions
       };
+
+      console.log('Prepared record for saving:', newRecord);
+
+      // Save to Supabase
       const savedRecord = await saveMedicalRecord(newRecord);
-      toast.success(`Medical record saved: ${savedRecord.id}`);
+      
+      console.log('Record saved successfully:', savedRecord);
+      
+      toast.success(`Medical record ${savedRecord.id} saved successfully to database`);
+      
+      // Dispatch custom event to notify other components
       window.dispatchEvent(new Event('savedAnalysesUpdated'));
+      
       if (onSaved) onSaved();
+      
+      // Close the modal after saving
       handleClose();
     } catch (error) {
-      toast.error('Failed to save record');
+      console.error('Save error:', error);
+      toast.error('Error saving record to database');
     } finally {
       setIsSaving(false);
     }
@@ -172,88 +176,299 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <SheetContent className="w-full md:max-w-[700px] overflow-y-auto p-0">
-        <SheetHeader className="p-6 border-b">
-          <SheetTitle className="flex items-center gap-2"><FileText />New Medical Record</SheetTitle>
+      <SheetContent className="w-full md:max-w-[600px] overflow-y-auto">
+        <SheetHeader className="border-b pb-4">
+          <SheetTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            New Medical Record
+          </SheetTitle>
         </SheetHeader>
         
-        <div className="p-6">
+        <div className="mt-6 space-y-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSaveAnalysis)} className="space-y-6">
-              <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><User />Student Information</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="studentName" render={({ field }) => (<FormItem><FormLabel>Student Name</FormLabel><FormControl><Input placeholder="Full name" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="studentId" render={({ field }) => (<FormItem><FormLabel>Student ID</FormLabel><FormControl><Input placeholder="ID number" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="courseYear" render={({ field }) => (<FormItem><FormLabel>Course & Year</FormLabel><FormControl><Input placeholder="e.g., BSN-3" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="age" render={({ field }) => (<FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" placeholder="Enter age" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="gender" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="Male">Male</SelectItem>
-                          <SelectItem value="Female">Female</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="collegeDepartment" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>College Department</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select college department" /></SelectTrigger></FormControl><SelectContent>{Object.entries(collegeDepartmentNames).map(([code, name]) => (<SelectItem key={code} value={code}>{name} ({code})</SelectItem>))}</SelectContent></Select></FormItem>)} />
-                </CardContent>
-              </Card>
+            <form onSubmit={form.handleSubmit(handleSaveAnalysis)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Student Information */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Student Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <FormField
+                      control={form.control}
+                      name="studentName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Student Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Full name" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="studentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Student ID</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Student ID number" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="courseYear"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Course & Year</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., BSN-3" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
               
-              <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><FileText />Symptoms & Analysis</CardTitle></CardHeader>
-                <CardContent>
-                  <FormField control={form.control} name="symptoms" render={({ field }) => (<FormItem><FormLabel>Patient Symptoms</FormLabel><FormControl><Textarea placeholder="Describe symptoms..." className="min-h-[140px]" {...field}/></FormControl></FormItem>)} />
-                  <div className="mt-4 flex justify-end">
-                    <Button type="button" onClick={handleAnalyze} disabled={isAnalyzing || !form.getValues('symptoms').trim()} className="w-full md:w-auto">
-                      {isAnalyzing ? "Analyzing..." : "Analyze Symptoms"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
+                {/* Symptoms */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Symptoms
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="symptoms"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Describe symptoms here..."
+                              className="min-h-[120px]" 
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="mt-2 flex justify-end">
+                      <Button 
+                        type="button"
+                        onClick={handleAnalyze}
+                        disabled={isAnalyzing || !form.getValues('symptoms').trim()}
+                        className="flex items-center gap-2"
+                      >
+                        {isAnalyzing ? (
+                          <>Analyzing<span className="animate-pulse">...</span></>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4" />
+                            <span>Analyze Symptoms</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* AI Analysis Results with Medical Disclaimer */}
               {analysisResult && (
-                <Card className="border-primary/20 bg-primary/5">
-                  <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Stethoscope />AI Analysis Results</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <Alert variant="default" className="bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700">
-                      <AlertTriangle className="h-5 w-5" />
-                      <AlertDescription>This AI analysis is a preliminary assessment and not a substitute for professional medical advice.</AlertDescription>
+                <Card className="border-2 border-medical-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      AI Analysis Results
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Medical Disclaimer */}
+                    <Alert className="mb-4 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        <strong>Medical Disclaimer:</strong> This AI analysis is for preliminary assessment only and is not a substitute for professional medical diagnosis. Please consult with a qualified healthcare provider or doctor for accurate diagnosis and treatment.
+                      </AlertDescription>
                     </Alert>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <FormLabel>Severity Assessment</FormLabel>
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="h-2.5 w-full bg-muted rounded-full">
-                            <div className={`h-full rounded-full ${analysisResult.severity >= 8 ? 'bg-destructive' : analysisResult.severity >= 5 ? 'bg-yellow-400' : 'bg-green-500'}`} style={{ width: `${(analysisResult.severity / 10) * 100}%` }} />
+
+                    {/* Severity Assessment */}
+                    {analysisResult.severity !== undefined && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Severity Assessment:</p>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-24 bg-gray-200 rounded-full">
+                            <div 
+                              className={`h-full rounded-full ${
+                                analysisResult.severity >= 8 ? 'bg-medical-critical' : 
+                                analysisResult.severity >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
+                              }`}
+                              style={{ width: `${(analysisResult.severity / 10) * 100}%` }}
+                            />
                           </div>
-                          <Badge variant="secondary">{analysisResult.severity}/10</Badge>
+                          <Badge 
+                            className={`${analysisResult.severity >= 8 ? 'text-medical-critical' : 
+                              analysisResult.severity >= 5 ? 'text-medical-warning' : 'text-medical-success'} 
+                              bg-opacity-10`}
+                            variant="outline"
+                          >
+                            {analysisResult.severity >= 8 ? 'High' : 
+                             analysisResult.severity >= 5 ? 'Medium' : 'Low'} 
+                             ({analysisResult.severity}/10)
+                          </Badge>
                         </div>
                       </div>
-                      {analysisResult.suggestedDiagnosis?.length > 0 && <div><FormLabel>Possible Conditions</FormLabel><div className="flex flex-wrap gap-2 mt-2">{analysisResult.suggestedDiagnosis.map((diag: string) => (<Badge key={diag} variant="outline" className="cursor-pointer" onClick={() => form.setValue('diagnosis', diag)}>{diag}</Badge>))}</div></div>}
-                    </div>
-                    {analysisResult.entities?.length > 0 && <div><FormLabel>Highlighted Medical Terms</FormLabel><div className="p-3 mt-2 rounded-md border bg-background">{renderHighlightedText(form.getValues('symptoms'), analysisResult.entities)}</div></div>}
-                    {analysisResult && <div><FormLabel>Recommended Actions</FormLabel><ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground">{generateRecommendedActions(analysisResult).map((action: string) => (<li key={action}>{action}</li>))}</ul></div>}
+                    )}
+                    
+                    {/* Suggested Diagnoses */}
+                    {analysisResult.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Possible Conditions (Preliminary):</p>
+                        <div className="flex flex-wrap gap-1">
+                          {analysisResult.suggestedDiagnosis.map((diagnosis: string, i: number) => (
+                            <Badge 
+                              key={i} 
+                              variant="outline" 
+                              className="bg-medical-primary/5 cursor-pointer hover:bg-medical-primary/10"
+                              onClick={() => form.setValue('diagnosis', diagnosis)}
+                            >
+                              {diagnosis}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recommended Actions */}
+                    {analysisResult && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Recommended Actions:</p>
+                        <ul className="list-disc pl-5 text-sm space-y-1">
+                          {generateRecommendedActions(analysisResult).map((action: string, i: number) => (
+                            <li key={i} className="text-gray-700 dark:text-gray-300">{action}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Detected Entities */}
+                    {analysisResult.entities && analysisResult.entities.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm mb-1 font-medium">Detected Medical Terms:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(
+                            analysisResult.entities.reduce((acc: Record<string, any[]>, entity: any) => {
+                              if (!acc[entity.type]) acc[entity.type] = [];
+                              acc[entity.type].push(entity);
+                              return acc;
+                            }, {})
+                          ).slice(0, 4).map(([type, entities]: [string, any]) => (
+                            <div key={type} className="mb-2">
+                              <h4 className="text-xs uppercase text-gray-500 mb-1">{type}</h4>
+                              <div className="flex flex-wrap gap-1">
+                                {(entities as any[]).slice(0, 3).map((entity, i) => (
+                                  <Badge 
+                                    key={i}
+                                    variant="outline" 
+                                    className="bg-gray-50 dark:bg-gray-800"
+                                  >
+                                    {entity.text}
+                                  </Badge>
+                                ))}
+                                {entities.length > 3 && (
+                                  <Badge variant="outline" className="bg-gray-50 dark:bg-gray-800">
+                                    +{entities.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
               
+              {/* Diagnosis */}
               <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Pill />Final Diagnosis & Medication</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <FormField control={form.control} name="diagnosis" render={({ field }) => (<FormItem><FormLabel>Final Diagnosis</FormLabel><FormControl><Textarea placeholder="Enter final diagnosis..." {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="medication" render={({ field }) => (<FormItem><FormLabel>Prescribed Medication</FormLabel><FormControl><Textarea placeholder="Enter medication..." {...field} /></FormControl></FormItem>)} />
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Stethoscope className="h-4 w-4" />
+                    Diagnosis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="diagnosis"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter final diagnosis here..."
+                            className="min-h-[80px]" 
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </Card>
               
-              <div className="flex justify-end gap-2 pt-4">
+              {/* Medication */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Pill className="h-4 w-4" />
+                    Prescribed Medication
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="medication"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter prescribed medication here..."
+                            className="min-h-[80px]" 
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+              
+              <div className="flex justify-end space-x-2">
                 <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>
-                <Button type="submit" disabled={isSaving || !form.getValues('studentName')} className="w-full md:w-auto">
-                  {isSaving ? "Saving..." : "Save Medical Record"}
+                <Button 
+                  type="submit"
+                  disabled={isSaving || !form.getValues('studentName')}
+                  className="flex items-center gap-2"
+                >
+                  {isSaving ? (
+                    <>Saving<span className="animate-pulse">...</span></>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Save Record</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

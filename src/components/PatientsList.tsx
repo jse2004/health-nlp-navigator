@@ -1,12 +1,9 @@
 
-import React, { useState } from 'react';
-import { Patient, MedicalRecord } from '@/data/sampleData';
+import React from 'react';
+import { Patient } from '@/data/sampleData';
 import PatientCard from './PatientCard';
-import PatientDetailsModal from './PatientDetailsModal';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Info } from 'lucide-react';
-import { fetchMedicalRecords } from '@/services/dataService';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { UserPlus } from 'lucide-react';
 
 interface PatientsListProps {
   patients: Patient[];
@@ -15,51 +12,21 @@ interface PatientsListProps {
 }
 
 const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, isLoading = false }) => {
-  const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-
-  const handleDetailsClick = async (patient: Patient) => {
-    try {
-      const records = await fetchMedicalRecords('', patient.id, true);
-      if (records.length > 0) {
-        const sortedRecords = records.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime());
-        setSelectedRecord(sortedRecords[0]);
-        setIsDetailsOpen(true);
-      } else {
-        const dummyRecord: MedicalRecord = {
-          id: `temp-${patient.id}`,
-          patient_id: patient.id,
-          patient_name: patient.name,
-          diagnosis: 'No diagnosis available',
-          doctor_notes: 'No medical records found for this patient.',
-          notes: '',
-          severity: 0,
-          date: new Date().toISOString(),
-          recommended_actions: []
-        };
-        setSelectedRecord(dummyRecord);
-        setIsDetailsOpen(true);
-      }
-    } catch (error) {
-      console.error('Error fetching patient records:', error);
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Patients</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Patients</h2>
         </div>
-        <p className="text-center py-8 text-muted-foreground">Loading patients...</p>
+        <p className="text-center py-8">Loading patients...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
+    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Patients</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Patients</h2>
         <Button variant="outline" size="sm" className="flex items-center gap-1">
           <UserPlus className="h-4 w-4" />
           <span>New Patient</span>
@@ -68,37 +35,23 @@ const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, 
       
       {patients.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {patients.map((patient) => (
+          {patients.map((patient, index) => (
             <PatientCard 
               key={patient.id} 
               patient={patient} 
               onClick={onSelectPatient}
-              onDetailsClick={handleDetailsClick}
             />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <UserPlus className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold">No Patients Found</h3>
-          <p className="text-muted-foreground max-w-md mx-auto mt-2">
-            Your patient list is currently empty. Start by adding a new patient record.
+        <div className="text-center py-10">
+          <UserPlus className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-gray-700">No patients found</h3>
+          <p className="text-gray-500 max-w-sm mx-auto mb-4">
+            Add new patients to start building your database.
           </p>
-          <Alert className="max-w-md mx-auto mt-6 text-left">
-            <Info className="h-4 w-4" />
-            <AlertTitle>Did you know?</AlertTitle>
-            <AlertDescription>
-              You can also create new patients directly from the "New Medical Record" form. The system will automatically create a new patient if the name does not exist.
-            </AlertDescription>
-          </Alert>
         </div>
       )}
-      
-      <PatientDetailsModal
-        record={selectedRecord}
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-      />
     </div>
   );
 };

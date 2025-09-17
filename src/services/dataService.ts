@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Patient, MedicalRecord, CollegeDepartment, collegeDepartmentNames } from '@/data/sampleData';
+import { Patient, MedicalRecord } from '@/data/sampleData';
 
 export interface MedicalCertificate {
   id: string;
@@ -161,26 +161,16 @@ export const fetchMedicalRecords = async (searchQuery?: string, patientId?: stri
   }
 };
 
-// Interface for patient data in medical record
-interface PatientDataForRecord {
-  name: string;
-  student_id?: string;
-  course_year?: string;
-  college_department?: CollegeDepartment;
-  age?: number;
-  gender?: 'Male' | 'Female' | 'Other';
-}
-
-// Enhanced helper function to find or create a patient with more complete data
-const findOrCreatePatientWithData = async (patientData: PatientDataForRecord): Promise<string | null> => {
-  if (!patientData.name) return null;
+// Helper function to find or create a patient
+const findOrCreatePatient = async (studentName: string): Promise<string | null> => {
+  if (!studentName) return null;
 
   try {
     // First, try to find existing patient by name
     const { data: existingPatients, error: fetchError } = await supabase
       .from('patients')
-      .select('id, college_department')
-      .eq('name', patientData.name)
+      .select('id')
+      .eq('name', studentName)
       .limit(1);
     
     if (fetchError) {
@@ -188,43 +178,22 @@ const findOrCreatePatientWithData = async (patientData: PatientDataForRecord): P
       return null;
     }
 
-    // If patient exists, update them with any new information (especially college department)
+    // If patient exists, return their ID
     if (existingPatients && existingPatients.length > 0) {
-      const existingPatient = existingPatients[0];
-      
-      // Update patient with new college department if provided and different
-      if (patientData.college_department && existingPatient.college_department !== patientData.college_department) {
-        const { error: updateError } = await supabase
-          .from('patients')
-          .update({ 
-            college_department: patientData.college_department,
-            last_visit: new Date().toISOString().split('T')[0],
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingPatient.id);
-        
-        if (updateError) {
-          console.error('Error updating existing patient college department:', updateError);
-        } else {
-          console.log('Updated existing patient with college department:', patientData.college_department);
-        }
-      }
-      
-      return existingPatient.id;
+      return existingPatients[0].id;
     }
 
-    // If patient doesn't exist, create a new one with complete data
+    // If patient doesn't exist, create a new one
     const patientId = await generatePatientId();
     const newPatient = {
       id: patientId,
-      name: patientData.name,
-      age: patientData.age || 20, // Default age for student
-      gender: patientData.gender || 'Other', // Default gender
+      name: studentName,
+      age: 20, // Default age for student
+      gender: 'Unknown', // Default gender
       condition: 'Student Health Check',
       status: 'Active',
       last_visit: new Date().toISOString().split('T')[0], // Today's date
-      medical_history: [],
-      college_department: patientData.college_department || null
+      medical_history: []
     };
 
     const { data: createdPatient, error: createError } = await supabase
@@ -240,14 +209,9 @@ const findOrCreatePatientWithData = async (patientData: PatientDataForRecord): P
 
     return createdPatient.id;
   } catch (error) {
-    console.error('Error in findOrCreatePatientWithData:', error);
+    console.error('Error in findOrCreatePatient:', error);
     return null;
   }
-};
-
-// Legacy helper function to find or create a patient (for backward compatibility)
-const findOrCreatePatient = async (studentName: string): Promise<string | null> => {
-  return findOrCreatePatientWithData({ name: studentName });
 };
 
 // Reactivate a medical record when a patient visits again
@@ -276,19 +240,14 @@ const reactivateMedicalRecordsByPatient = async (patientId: string): Promise<voi
   }
 };
 
-// Save or update a medical record with enhanced patient data support
-export const saveMedicalRecord = async (record: Partial<MedicalRecord> & { patient_data?: PatientDataForRecord }): Promise<MedicalRecord> => {
+// Save or update a medical record
+export const saveMedicalRecord = async (record: Partial<MedicalRecord>): Promise<MedicalRecord> => {
   try {
-    const { id, patient_data, ...recordData } = record;
+    const { id, ...recordData } = record;
     
-    // Handle patient connection with enhanced data
+    // Handle patient connection
     let patientId = recordData.patient_id;
-    
-    // Use enhanced patient data if provided
-    if (patient_data && !patientId) {
-      patientId = await findOrCreatePatientWithData(patient_data);
-    } else if (recordData.patient_name && !patientId) {
-      // Fallback to legacy method
+    if (recordData.patient_name && !patientId) {
       patientId = await findOrCreatePatient(recordData.patient_name);
     }
 
@@ -656,328 +615,4 @@ export const fetchMedicalCertificatesByRecord = async (medicalRecordId: string):
   }
 
   return data || [];
-};
-
-// New Analytics Functions for College Departments
-
-export interface MonthlyVisitAnalytics {
-  month: string;
-  college_department: CollegeDepartment;
-  total_visits: number;
-  unique_patients: number;
-  critical_cases: number;
-  moderate_cases: number;
-  mild_cases: number;
-}
-
-export interface CaseAnalyticsByDepartment {
-  month: string;
-  college_department: CollegeDepartment;
-  diagnosis: string;
-  case_count: number;
-}
-
-// Fetch monthly visit analytics by department
-export const fetchMonthlyVisitAnalytics = async (): Promise<MonthlyVisitAnalytics[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('monthly_visit_analytics')
-      .select('*')
-      .order('month', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching monthly visit analytics:', error);
-      throw error;
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Error in fetchMonthlyVisitAnalytics:', error);
-    throw error;
-  }
-};
-
-// Fetch case analytics by department
-export const fetchCaseAnalyticsByDepartment = async (): Promise<CaseAnalyticsByDepartment[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('case_analytics_by_department')
-      .select('*')
-      .order('month', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching case analytics by department:', error);
-      throw error;
-    }
-
-    return data || [];
-  } catch (error) {
-    console.error('Error in fetchCaseAnalyticsByDepartment:', error);
-    throw error;
-  }
-};
-
-import * as XLSX from 'xlsx';
-
-// Enhanced Excel Export with College Department and Visit History
-export const downloadEnhancedRecordsCSV = async () => {
-  try {
-    // Fetch all patients with their college departments
-    const { data: patients, error: patientsError } = await supabase
-      .from('patients')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (patientsError) {
-      console.error('Error fetching patients for Excel:', patientsError);
-      throw patientsError;
-    }
-
-    // Fetch all medical records (including inactive ones for complete history)
-    const { data: records, error: recordsError } = await supabase
-      .from('medical_records')
-      .select('*')
-      .order('date', { ascending: false });
-
-    if (recordsError) {
-      console.error('Error fetching medical records for Excel:', recordsError);
-      throw recordsError;
-    }
-
-    // Create a new workbook
-    const wb = XLSX.utils.book_new();
-    
-    // Enhanced headers including college department and visit history
-    const headers = [
-      "Patient ID",
-      "Patient Name", 
-      "College Department",
-      "Age",
-      "Gender",
-      "Record ID",
-      "Visit Date",
-      "Status (Active/Inactive)",
-      "Severity",
-      "Diagnosis",
-      "Symptoms/Notes",
-      "Doctor Notes",
-      "Recommended Actions",
-      "Visit Number",
-      "Total Visits for Patient",
-      "Days Since Last Visit",
-      "Created Date",
-      "Updated Date"
-    ];
-
-    // Group records by patient to track visit history
-    const recordsByPatient = records?.reduce((acc, record) => {
-      if (!acc[record.patient_id]) {
-        acc[record.patient_id] = [];
-      }
-      acc[record.patient_id].push(record);
-      return acc;
-    }, {} as Record<string, typeof records>) || {};
-
-    // Process each record with enhanced information
-    const data = records?.map((record) => {
-      const patient = patients?.find(p => p.id === record.patient_id);
-      const patientRecords = recordsByPatient[record.patient_id] || [];
-      const visitNumber = patientRecords.length - patientRecords.findIndex(r => r.id === record.id);
-      const totalVisits = patientRecords.length;
-      
-      // Calculate days since last visit
-      let daysSinceLastVisit = 0;
-      const sortedPatientRecords = patientRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      const currentRecordIndex = sortedPatientRecords.findIndex(r => r.id === record.id);
-      if (currentRecordIndex > 0) {
-        const previousVisit = sortedPatientRecords[currentRecordIndex - 1];
-        const currentDate = new Date(record.date);
-        const previousDate = new Date(previousVisit.date);
-        daysSinceLastVisit = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
-      }
-
-      return [
-        patient?.id || "Unknown",
-        patient?.name || "Unknown",
-        patient?.college_department ? collegeDepartmentNames[patient.college_department] : "Not Specified",
-        patient?.age || "Unknown",
-        patient?.gender || "Unknown",
-        record.id || "Unknown",
-        record.date ? new Date(record.date).toLocaleDateString() : "Unknown",
-        record.status || "active",
-        record.severity || 0,
-        record.diagnosis || "No diagnosis",
-        record.notes || record.doctor_notes || "",
-        record.doctor_notes || "",
-        Array.isArray(record.recommended_actions) 
-          ? record.recommended_actions.join("; ") 
-          : String(record.recommended_actions || ""),
-        visitNumber,
-        totalVisits,
-        daysSinceLastVisit,
-        record.created_at ? new Date(record.created_at).toLocaleDateString() : "Unknown",
-        record.updated_at ? new Date(record.updated_at).toLocaleDateString() : "Unknown"
-      ];
-    }) || [];
-
-    // Create the main worksheet with headers and data
-    const wsData = [headers, ...data];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Set column widths for better readability
-    const columnWidths = [
-      { wch: 15 }, // Patient ID
-      { wch: 20 }, // Patient Name
-      { wch: 25 }, // College Department
-      { wch: 8 },  // Age
-      { wch: 10 }, // Gender
-      { wch: 15 }, // Record ID
-      { wch: 12 }, // Visit Date
-      { wch: 18 }, // Status
-      { wch: 10 }, // Severity
-      { wch: 30 }, // Diagnosis
-      { wch: 40 }, // Symptoms/Notes
-      { wch: 40 }, // Doctor Notes
-      { wch: 30 }, // Recommended Actions
-      { wch: 12 }, // Visit Number
-      { wch: 15 }, // Total Visits
-      { wch: 18 }, // Days Since Last Visit
-      { wch: 15 }, // Created Date
-      { wch: 15 }  // Updated Date
-    ];
-    ws['!cols'] = columnWidths;
-
-    // Style the header row - make it bold and add background color
-    const headerStyle = {
-      font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "366092" } },
-      alignment: { horizontal: "center", vertical: "center" },
-      border: {
-        top: { style: "thin", color: { rgb: "000000" } },
-        bottom: { style: "thin", color: { rgb: "000000" } },
-        left: { style: "thin", color: { rgb: "000000" } },
-        right: { style: "thin", color: { rgb: "000000" } }
-      }
-    };
-
-    // Apply header styling
-    for (let i = 0; i < headers.length; i++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (!ws[cellAddress]) ws[cellAddress] = {};
-      ws[cellAddress].s = headerStyle;
-    }
-
-    // Add the main worksheet
-    XLSX.utils.book_append_sheet(wb, ws, "Medical Records");
-
-    // Create Department Summary worksheet
-    const departmentStats = patients?.reduce((acc, patient) => {
-      const dept = patient.college_department || 'Not Specified';
-      if (!acc[dept]) {
-        acc[dept] = {
-          totalPatients: 0,
-          activePatients: 0,
-          totalVisits: 0,
-          totalAge: 0
-        };
-      }
-      acc[dept].totalPatients++;
-      if (patient.status === 'Active') acc[dept].activePatients++;
-      acc[dept].totalVisits += recordsByPatient[patient.id]?.length || 0;
-      acc[dept].totalAge += patient.age || 0;
-      return acc;
-    }, {} as Record<string, any>) || {};
-
-    const deptHeaders = ["College Department", "Total Patients", "Active Patients", "Total Visits", "Average Age"];
-    const deptData = Object.entries(departmentStats).map(([dept, stats]) => {
-      const avgAge = stats.totalPatients > 0 ? (stats.totalAge / stats.totalPatients).toFixed(1) : '0';
-      const deptName = dept !== 'Not Specified' ? collegeDepartmentNames[dept as CollegeDepartment] || dept : dept;
-      return [deptName, stats.totalPatients, stats.activePatients, stats.totalVisits, avgAge];
-    });
-
-    const deptWsData = [deptHeaders, ...deptData];
-    const deptWs = XLSX.utils.aoa_to_sheet(deptWsData);
-    
-    // Style department summary headers
-    for (let i = 0; i < deptHeaders.length; i++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (!deptWs[cellAddress]) deptWs[cellAddress] = {};
-      deptWs[cellAddress].s = headerStyle;
-    }
-
-    deptWs['!cols'] = [
-      { wch: 30 }, // College Department
-      { wch: 15 }, // Total Patients
-      { wch: 15 }, // Active Patients
-      { wch: 15 }, // Total Visits
-      { wch: 15 }  // Average Age
-    ];
-
-    XLSX.utils.book_append_sheet(wb, deptWs, "Department Summary");
-
-    // Create Monthly Summary worksheet
-    const monthlyStats = records?.reduce((acc, record) => {
-      const month = new Date(record.date).toISOString().substring(0, 7); // YYYY-MM format
-      if (!acc[month]) {
-        acc[month] = {
-          totalVisits: 0,
-          uniquePatients: new Set(),
-          critical: 0,
-          moderate: 0,
-          mild: 0
-        };
-      }
-      acc[month].totalVisits++;
-      acc[month].uniquePatients.add(record.patient_id);
-      
-      const severity = record.severity || 0;
-      if (severity >= 7) acc[month].critical++;
-      else if (severity >= 4) acc[month].moderate++;
-      else acc[month].mild++;
-      
-      return acc;
-    }, {} as Record<string, any>) || {};
-
-    const monthlyHeaders = ["Month", "Total Visits", "Unique Patients", "Critical Cases", "Moderate Cases", "Mild Cases"];
-    const monthlyData = Object.entries(monthlyStats)
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([month, stats]) => [
-        month,
-        stats.totalVisits,
-        stats.uniquePatients.size,
-        stats.critical,
-        stats.moderate,
-        stats.mild
-      ]);
-
-    const monthlyWsData = [monthlyHeaders, ...monthlyData];
-    const monthlyWs = XLSX.utils.aoa_to_sheet(monthlyWsData);
-
-    // Style monthly summary headers
-    for (let i = 0; i < monthlyHeaders.length; i++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (!monthlyWs[cellAddress]) monthlyWs[cellAddress] = {};
-      monthlyWs[cellAddress].s = headerStyle;
-    }
-
-    monthlyWs['!cols'] = [
-      { wch: 12 }, // Month
-      { wch: 15 }, // Total Visits
-      { wch: 18 }, // Unique Patients
-      { wch: 15 }, // Critical Cases
-      { wch: 18 }, // Moderate Cases
-      { wch: 15 }  // Mild Cases
-    ];
-
-    XLSX.utils.book_append_sheet(wb, monthlyWs, "Monthly Summary");
-
-    // Generate and download the Excel file
-    const fileName = `enhanced_medical_records_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-    
-    return true;
-  } catch (error) {
-    console.error('Error downloading enhanced Excel:', error);
-    throw error;
-  }
 };
