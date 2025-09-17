@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info } from 'lucide-react';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -12,7 +12,9 @@ import NewNLPAnalysis from './NewNLPAnalysis';
 import SearchBar from './SearchBar';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, deletePatient, getAnalyticsData } from '@/services/dataService';
+import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, getAnalyticsData, downloadEnhancedRecordsCSV } from '@/services/dataService';
+import AppointmentScheduler from './AppointmentScheduler';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
@@ -20,137 +22,67 @@ const Dashboard: React.FC = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
+  const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<MedicalRecord | null>(null);
+  const [isRecordDetailsOpen, setIsRecordDetailsOpen] = useState(false);
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [analyticsSummary, setAnalyticsSummary] = useState({
-    totalPatients: 0,
-    criticalCases: 0,
-    pendingReviews: 0,
-    recentAdmissions: 0,
-    previousTotalPatients: 0,
-    previousCriticalCases: 0,
-    previousPendingReviews: 0
-  });
+  const [analyticsSummary, setAnalyticsSummary] = useState({ totalPatients: 0, criticalCases: 0, pendingReviews: 0, recentAdmissions: 0, previousTotalPatients: 0, previousCriticalCases: 0, previousPendingReviews: 0 });
 
-  // Load analytics data from database
   const loadAnalyticsData = async () => {
     try {
       const analyticsData = await getAnalyticsData();
-      console.log('Analytics calculated:', analyticsData);
       setAnalyticsSummary(analyticsData);
-      return analyticsData;
     } catch (error) {
       console.error('Error loading analytics:', error);
-      return {
-        totalPatients: 0,
-        criticalCases: 0,
-        pendingReviews: 0,
-        recentAdmissions: 0,
-        previousTotalPatients: 0,
-        previousCriticalCases: 0,
-        previousPendingReviews: 0
-      };
     }
   };
 
-  // Generate real insights from actual data
   const generateRealInsights = (patients: Patient[], records: MedicalRecord[]) => {
     const insights = [];
-    
-    // Analyze condition patterns
     const conditionCounts = patients.reduce((acc: Record<string, number>, patient) => {
-      if (patient.condition) {
-        acc[patient.condition] = (acc[patient.condition] || 0) + 1;
-      }
+      if (patient.condition) acc[patient.condition] = (acc[patient.condition] || 0) + 1;
       return acc;
     }, {});
-    
-    const mostCommonCondition = Object.entries(conditionCounts)
-      .sort((a, b) => b[1] - a[1])[0];
-    
+    const mostCommonCondition = Object.entries(conditionCounts).sort((a, b) => b[1] - a[1])[0];
     if (mostCommonCondition) {
-      insights.push({
-        title: "Pattern Recognition",
-        content: `Most common condition: ${mostCommonCondition[0]} (${mostCommonCondition[1]} cases)`,
-        type: "trend"
-      });
+      insights.push({ title: "Condition Spotlight", content: `Most common patient condition: ${mostCommonCondition[0]} (${mostCommonCondition[1]} cases).`, type: "trend" });
     }
-    
-    // Analyze severity patterns
     const highSeverityRecords = records.filter(r => r.severity && r.severity >= 8).length;
     if (highSeverityRecords > 0) {
-      insights.push({
-        title: "High Severity Alert",
-        content: `${highSeverityRecords} records with severity 8+ require immediate attention`,
-        type: "clinical"
-      });
+      insights.push({ title: "High-Severity Cases", content: `${highSeverityRecords} records with a severity rating of 8+ require immediate review.`, type: "clinical" });
     }
-    
-    // Analyze recent activity
-    const recentRecords = records.filter(r => {
-      if (!r.date) return false;
-      const recordDate = new Date(r.date);
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-      return recordDate >= threeDaysAgo;
-    }).length;
-    
+    const recentRecords = records.filter(r => r.date && new Date(r.date) >= new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)).length;
     if (recentRecords > 0) {
-      insights.push({
-        title: "Recent Activity",
-        content: `${recentRecords} new medical records added in the last 3 days`,
-        type: "care"
-      });
+      insights.push({ title: "Recent Activity", content: `${recentRecords} new medical records have been added in the last 72 hours.`, type: "care" });
     }
-    
-    // Analyze pending reviews
-    const pendingDiagnosis = records.filter(r => !r.diagnosis || r.diagnosis.trim() === '').length;
+    const pendingDiagnosis = records.filter(r => !r.diagnosis || r.diagnosis.trim() === 'Pending evaluation').length;
     if (pendingDiagnosis > 0) {
-      insights.push({
-        title: "Care Gap Identified",
-        content: `${pendingDiagnosis} records awaiting diagnosis confirmation`,
-        type: "medication"
-      });
+      insights.push({ title: "Pending Diagnoses", content: `${pendingDiagnosis} records are awaiting a final diagnosis.`, type: "medication" });
     }
-    
-    return insights.slice(0, 4); // Return top 4 insights
+    return insights.slice(0, 4);
   };
 
-  // Fetch patients and records from Supabase
   const loadData = async () => {
     setIsLoading(true);
     try {
-      console.log('Loading data from database...');
-      
-      const [patientsData, recordsData, analyticsData] = await Promise.all([
-        fetchPatients(searchQuery),
-        fetchMedicalRecords(searchQuery),
-        loadAnalyticsData()
-      ]);
-      
+      const [patientsData, recordsData] = await Promise.all([fetchPatients(searchQuery), fetchMedicalRecords(searchQuery)]);
       setPatients(patientsData);
       setMedicalRecords(recordsData);
-      
-      console.log('Patients loaded:', patientsData.length);
-      console.log('Medical records loaded:', recordsData.length);
-      
-      toast.success('Data loaded successfully');
+      await loadAnalyticsData();
+      toast.success('Dashboard data loaded successfully.');
     } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load data from database');
+      toast.error('Failed to load dashboard data.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initial data load and event listeners setup
   useEffect(() => {
     loadData();
-    
-    // Load saved analyses from localStorage (legacy support)
-    const loadSavedAnalyses = () => {
+    const loadSaved = () => {
       try {
         const saved = localStorage.getItem('savedAnalyses');
         if (saved) {
@@ -158,420 +90,267 @@ const Dashboard: React.FC = () => {
         }
       } catch (error) {
         console.error('Error loading saved analyses:', error);
+        // If parsing fails, clear the corrupted data
+        localStorage.removeItem('savedAnalyses');
       }
     };
-    
-    loadSavedAnalyses();
-
-    // Set up event listener to detect changes
-    const handleStorageChange = () => {
-      loadSavedAnalyses();
-      loadData(); // Refresh data when changes occur
-    };
-    
+    loadSaved();
+    const handleStorageChange = () => { loadSaved(); loadData(); };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('savedAnalysesUpdated', handleStorageChange);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('savedAnalysesUpdated', handleStorageChange);
     };
   }, []);
 
-  // Handle search with real-time data refresh
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loadData();
-    }, 300); // Debounce search
-    
-    return () => clearTimeout(timeoutId);
+    const debouncedLoad = setTimeout(() => { loadData(); }, 300);
+    return () => clearTimeout(debouncedLoad);
   }, [searchQuery]);
 
   const handleViewPatientRecord = (patientId: string) => {
-    const record = medicalRecords.find(record => record.patient_id === patientId);
+    const record = medicalRecords.find(r => r.patient_id === patientId);
     if (record) {
       setSelectedRecord(record);
       setIsAnalysisOpen(true);
     } else {
-      toast.error('No medical record found for this patient');
+      toast.error('No medical record found for this patient.');
     }
   };
 
-  const handleNewAnalysis = () => {
-    setIsNewAnalysisOpen(true);
-    toast.info("Creating new medical record");
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', { 
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
+  const handleNewAnalysis = () => setIsNewAnalysisOpen(true);
 
   const handleDeleteAnalysis = async (id: string) => {
-    try {
-      if (confirm('Are you sure you want to delete this record?')) {
-        console.log('Attempting to delete record:', id);
+    if (confirm('Are you sure you want to delete this medical record?')) {
+      try {
         await deleteMedicalRecord(id);
-        console.log('Record deleted, refreshing data...');
-        
-        // Force refresh the data immediately
         await loadData();
-        
-        toast.success('Record deleted successfully');
+        toast.success('Medical record deleted successfully.');
+      } catch (error) {
+        toast.error('Failed to delete medical record.');
       }
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast.error(`Error deleting record: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
-  // Function to download all records as CSV
-  const downloadAllRecords = () => {
+  const downloadAllRecords = async () => {
     try {
-      let csvContent = "data:text/csv;charset=utf-8,";
-      
-      csvContent += "ID,Date,Patient Name,Severity,Diagnosis,Doctor Notes\n";
-      
-      medicalRecords.forEach(record => {
-        const row = [
-          record.id,
-          new Date(record.date || '').toLocaleDateString(),
-          record.patient_name || "Unknown",
-          record.severity || 0,
-          record.diagnosis || "No diagnosis",
-          (record.doctor_notes || "").replace(/,/g, ";")
-        ];
-        csvContent += row.join(",") + "\n";
-      });
-      
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `medical_records_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success("Records downloaded successfully");
+      await downloadEnhancedRecordsCSV();
+      toast.success("All records have been downloaded successfully.");
     } catch (error) {
-      console.error("Download error:", error);
-      toast.error("Failed to download records");
+      toast.error("Failed to download records.");
     }
   };
 
-  const handleViewAll = () => {
-    setIsViewAllOpen(true);
-  };
-
-  // Generate real insights
   const realInsights = generateRealInsights(patients, medicalRecords);
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+    <div className="p-4 sm:p-6 lg:p-8 bg-background text-foreground min-h-screen">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Medical Dashboard</h1>
-          <p className="text-gray-500 dark:text-gray-400">Analyze patient records with AI assistance</p>
+          <h1 className="text-3xl font-bold tracking-tight">Medical Dashboard</h1>
+          <p className="text-muted-foreground mt-1">AI-powered patient record analysis and insights.</p>
         </div>
-        <div className="flex flex-col md:flex-row gap-3">
-          <SearchBar onSearch={handleSearch} placeholder="Search patients or records..." />
-          <Button className="flex items-center gap-2" onClick={handleNewAnalysis}>
-            <FileText className="h-4 w-4" />
-            <span>New Medical Record</span>
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <SearchBar onSearch={setSearchQuery} placeholder="Search patients, records..." />
+          <Button className="flex items-center gap-2" onClick={handleNewAnalysis}><FileText className="h-4 w-4" />New Medical Record</Button>
         </div>
       </div>
 
       <AnalyticsSummary data={analyticsSummary} />
 
-      <Tabs defaultValue="patients" className="w-full">
+      <Tabs defaultValue="patients" className="w-full mt-8">
         <div className="flex justify-between items-center mb-4">
           <TabsList>
-            <TabsTrigger value="patients" className="flex items-center gap-1">
-              <Heart className="h-4 w-4" />
-              <span>Patients</span>
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="flex items-center gap-1">
-              <BrainCircuit className="h-4 w-4" />
-              <span>AI Insights</span>
-            </TabsTrigger>
-            <TabsTrigger value="records" className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              <span>Medical Records</span>
-            </TabsTrigger>
-            <TabsTrigger value="saved-analyses" className="flex items-center gap-1">
-              <Save className="h-4 w-4" />
-              <span>Saved Records</span>
-            </TabsTrigger>
+            <TabsTrigger value="patients" className="flex items-center gap-1.5"><Heart className="h-4 w-4" />Patients</TabsTrigger>
+            <TabsTrigger value="insights" className="flex items-center gap-1.5"><BrainCircuit className="h-4 w-4" />AI Insights</TabsTrigger>
+            <TabsTrigger value="records" className="flex items-center gap-1.5"><FileText className="h-4 w-4" />Medical Records</TabsTrigger>
+            <TabsTrigger value="saved-analyses" className="flex items-center gap-1.5"><Save className="h-4 w-4" />Saved Records</TabsTrigger>
           </TabsList>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-medical-primary flex items-center gap-1"
-            onClick={handleViewAll}
-          >
-            <span>View All</span>
-            <ArrowUpRight className="h-4 w-4" />
-          </Button>
+          <Button variant="ghost" size="sm" className="text-primary flex items-center gap-1" onClick={() => setIsViewAllOpen(true)}>View All<ArrowUpRight className="h-4 w-4" /></Button>
         </div>
 
-        <TabsContent value="patients" className="mt-0">
-          <PatientsList 
-            patients={patients}
-            onSelectPatient={(patient) => handleViewPatientRecord(patient.id)}
-            isLoading={isLoading}
-          />
+        <TabsContent value="patients"><PatientsList patients={patients} onSelectPatient={(patient) => handleViewPatientRecord(patient.id)} isLoading={isLoading} /></TabsContent>
+
+        <TabsContent value="insights">
+          {realInsights.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {realInsights.map((insight, i) => <InsightCard key={i} {...insight} type={insight.type as any} />)}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-card border rounded-lg">
+              <BrainCircuit className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold">No AI Insights Yet</h3>
+              <p className="text-muted-foreground max-w-md mx-auto mt-2">Insights will be generated automatically as you add more patient data and medical records.</p>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="insights" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {realInsights.length > 0 ? (
-              realInsights.map((insight, index) => (
-                <InsightCard 
-                  key={index}
-                  title={insight.title}
-                  content={insight.content}
-                  type={insight.type as any}
-                />
-              ))
+        <TabsContent value="records">
+          <div className="bg-card text-card-foreground p-8 rounded-xl shadow-sm border border-border/50">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Recent Medical Records</h2>
+                <p className="text-muted-foreground mt-2">Latest patient records and analysis data</p>
+              </div>
+              <Badge variant="secondary" className="px-3 py-1">
+                {medicalRecords.length} Records
+              </Badge>
+            </div>
+            
+            {isLoading ? (
+              <div className="text-center py-16">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-muted rounded w-1/4 mx-auto mb-4"></div>
+                  <div className="h-4 bg-muted rounded w-1/3 mx-auto"></div>
+                </div>
+                <p className="text-muted-foreground mt-4">Loading records...</p>
+              </div>
+            ) : medicalRecords.length > 0 ? (
+              <div className="overflow-x-auto">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full divide-y divide-border/50">
+                    <thead>
+                      <tr className="bg-muted/30">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Record ID</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Date</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Student Name</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Severity</th>
+                        <th className="px-6 py-4 text-center text-sm font-semibold text-foreground tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {medicalRecords.slice(0, 5).map((record, index) => (
+                        <tr key={record.id} className="hover:bg-muted/20 transition-colors duration-150">
+                          <td className="px-6 py-5">
+                            <div className="flex items-center">
+                              <span className="font-mono text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                                {record.id.substring(0, 8)}...
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="text-sm font-medium text-foreground">
+                              {new Date(record.date || '').toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(record.date || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="text-sm font-medium text-foreground">
+                              {record.patient_name || "N/A"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Patient #{index + 1}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <div className="h-2.5 w-20 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-300 ${
+                                      record.severity >= 8 ? 'bg-destructive' : 
+                                      record.severity >= 5 ? 'bg-yellow-500' : 'bg-green-500'
+                                    }`} 
+                                    style={{ width: `${(record.severity / 10) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                                record.severity >= 8 ? 'text-destructive bg-destructive/10' : 
+                                record.severity >= 5 ? 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/20' : 
+                                'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20'
+                              }`}>
+                                {record.severity}/10
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary hover:text-primary/80 hover:bg-primary/10" 
+                                onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Details
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-muted-foreground hover:text-foreground hover:bg-muted/50" 
+                                onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10" 
+                                onClick={() => handleDeleteAnalysis(record.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : (
-              <div className="col-span-full text-center py-10">
-                <BrainCircuit className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No insights available</h3>
-                <p className="text-gray-500 dark:text-gray-400">Add more patient data to generate AI insights</p>
+              <div className="text-center py-20">
+                <div className="max-w-md mx-auto">
+                  <FileText className="h-20 w-20 text-muted-foreground/30 mx-auto mb-6" />
+                  <h3 className="text-2xl font-semibold text-foreground mb-3">No Medical Records Found</h3>
+                  <p className="text-muted-foreground mb-8">Create a new medical record to get started with patient management.</p>
+                  <Button onClick={handleNewAnalysis} size="lg" className="gap-2">
+                    <FileText className="h-5 w-5" />
+                    Create First Record
+                  </Button>
+                </div>
               </div>
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="records" className="mt-0">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Medical Records</h2>
-            </div>
-            
-            <div className="overflow-x-auto">
-              {isLoading ? (
-                <p className="text-center py-8">Loading records...</p>
-              ) : medicalRecords.length > 0 ? (
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Record ID
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Student Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Severity
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {medicalRecords.slice(0, 5).map((record) => (
-                      <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {record.id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {new Date(record.date || '').toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {record.patient_name || "Student Record"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded-full">
-                              <div 
-                                className={`h-full rounded-full ${
-                                  (record.severity || 0) >= 8 ? 'bg-medical-critical' : 
-                                  (record.severity || 0) >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
-                                }`}
-                                style={{ width: `${((record.severity || 0) / 10) * 100}%` }}
-                              />
-                            </div>
-                            <span className="ml-2 text-xs text-gray-500 dark:text-gray-300">{record.severity || 0}/10</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-blue-600 hover:text-blue-800 mr-2"
-                            onClick={() => {
-                              setSelectedRecord(record);
-                              setIsDetailsOpen(true);
-                            }}
-                          >
-                            Details
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-medical-primary mr-2"
-                            onClick={() => {
-                              setSelectedRecord(record);
-                              setIsAnalysisOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => handleDeleteAnalysis(record.id)}
-                          >
-                            Delete
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-center py-10">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No medical records found</h3>
-                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6">
-                    Create a new medical record using the "New Medical Record" button above.
-                  </p>
-                  <Button onClick={handleNewAnalysis}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Create Medical Record
-                  </Button>
-                </div>
-              )}
-              
-              {medicalRecords.length > 5 && (
-                <div className="mt-4 text-center">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleViewAll}
-                  >
-                    View All Records
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="saved-analyses" className="mt-0">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Saved Medical Records</h2>
-            </div>
-            
+        <TabsContent value="saved-analyses">
+          <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
+            <h2 className="text-lg font-semibold mb-4">Saved Preliminary Records</h2>
             {savedAnalyses.length === 0 ? (
-              <div className="text-center py-10">
-                <Save className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No saved records yet</h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                  Create a new medical record using the "New Medical Record" button and save it to view it here.
-                </p>
+              <div className="text-center py-16">
+                <Save className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold">No Saved Records</h3>
+                <p className="text-muted-foreground max-w-md mx-auto mt-2">Records you save from the "New Medical Record" form will appear here for later access.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50">
                     <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Student Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Symptoms
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Severity
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Actions
-                      </th>
+                      <th className="th-cell">Date</th>
+                      <th className="th-cell">Student Name</th>
+                      <th className="th-cell">Symptoms</th>
+                      <th className="th-cell">Severity</th>
+                      <th className="th-cell">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {savedAnalyses.map((analysis) => (
-                      <tr key={analysis.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {formatDate(analysis.date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {analysis.studentName || "Student"}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
-                          {analysis.symptoms?.substring(0, 100) || analysis.text?.substring(0, 100)}{(analysis.symptoms?.length > 100 || analysis.text?.length > 100) ? '...' : ''}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {(analysis.result?.severity || analysis.nlpResult?.severity) && (
-                            <div className="flex items-center">
-                              <div className="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded-full">
-                                <div 
-                                  className={`h-full rounded-full ${
-                                    (analysis.result?.severity || analysis.nlpResult?.severity) >= 8 ? 'bg-medical-critical' : 
-                                    (analysis.result?.severity || analysis.nlpResult?.severity) >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
-                                  }`}
-                                  style={{ width: `${((analysis.result?.severity || analysis.nlpResult?.severity) / 10) * 100}%` }}
-                                />
-                              </div>
-                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-300">{analysis.result?.severity || analysis.nlpResult?.severity}/10</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-medical-primary mr-2"
-                            onClick={() => {
-                              // Convert saved analysis to medical record format for editing
-                              const recordToEdit = {
-                                id: analysis.id,
-                                patient_id: analysis.studentId || '',
-                                patient_name: analysis.studentName || '',
-                                date: analysis.date,
-                                diagnosis: analysis.diagnosis || '',
-                                severity: analysis.result?.severity || analysis.nlpResult?.severity || 5,
-                                doctor_notes: analysis.symptoms || analysis.text || '',
-                                recommended_actions: []
-                              };
-                              setSelectedRecord(recordToEdit as MedicalRecord);
-                              setIsAnalysisOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteAnalysis(analysis.id)}
-                            className="text-destructive"
-                          >
-                            Delete
-                          </Button>
+                  <tbody className="divide-y divide-border">
+                    {savedAnalyses.map(analysis => (
+                      <tr key={analysis.id} className="hover:bg-muted/50">
+                        <td className="td-cell">{new Date(analysis.date).toLocaleString()}</td>
+                        <td className="td-cell">{analysis.studentName || "N/A"}</td>
+                        <td className="td-cell max-w-xs truncate">{analysis.symptoms}</td>
+                        <td className="td-cell">{analysis.result?.severity || analysis.nlpResult?.severity || "N/A"}</td>
+                        <td className="td-cell">
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => { setSelectedRecord(analysis); setIsAnalysisOpen(true); }}>Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAnalysis(analysis.id)}>Delete</Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -583,150 +362,162 @@ const Dashboard: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      <MedicalRecordAnalysis 
-        record={selectedRecord}
-        isOpen={isAnalysisOpen}
-        onClose={() => setIsAnalysisOpen(false)}
-        onSaved={loadData}
-      />
-
-      <PatientDetailsModal 
-        record={selectedRecord}
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-      />
-
-      <NewNLPAnalysis
-        isOpen={isNewAnalysisOpen}
-        onClose={() => setIsNewAnalysisOpen(false)}
-        onSaved={loadData}
-      />
+      <MedicalRecordAnalysis record={selectedRecord} isOpen={isAnalysisOpen} onClose={() => setIsAnalysisOpen(false)} onSaved={loadData} />
+      <PatientDetailsModal record={selectedRecordForDetails} isOpen={isRecordDetailsOpen} onClose={() => setIsRecordDetailsOpen(false)} />
+      <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={loadData} />
       
-      {/* View All Records Modal */}
-      {isViewAllOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 w-11/12 max-w-6xl h-5/6 rounded-lg p-6 overflow-hidden flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">All Medical Records</h2>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={downloadAllRecords}
-                  className="flex items-center gap-1"
-                >
+      {isViewAllOpen && 
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border/50 w-full max-w-7xl h-full max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-8 pb-6 border-b border-border/50 bg-card/50 backdrop-blur-sm">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight text-card-foreground">All Medical Records</h2>
+                <p className="text-muted-foreground mt-2">Complete overview of all patient medical records</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary" className="px-3 py-1.5 text-sm">
+                  {medicalRecords.length} Total Records
+                </Badge>
+                <Button variant="outline" size="sm" onClick={downloadAllRecords} className="flex items-center gap-2 hover:bg-accent/50">
                   <Download className="h-4 w-4" />
-                  <span>Download All</span>
+                  Download All
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setIsViewAllOpen(false)}
-                  className="text-destructive"
-                >
-                  Close
+                <Button variant="ghost" size="icon" onClick={() => setIsViewAllOpen(false)} className="hover:bg-accent/50">
+                  <Info className="h-5 w-5" />
                 </Button>
               </div>
             </div>
             
-            <div className="overflow-auto flex-grow">
+            <div className="overflow-auto flex-grow bg-card">
               {medicalRecords.length > 0 ? (
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Record ID
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Student Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Diagnosis
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Severity
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {medicalRecords.map((record) => (
-                      <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {record.id?.substring(0, 8)}...
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                          {new Date(record.date || '').toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {record.patient_name || "Student Record"}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
-                          {record.diagnosis || "No diagnosis"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded-full">
-                              <div 
-                                className={`h-full rounded-full ${
-                                  (record.severity || 0) >= 8 ? 'bg-medical-critical' : 
-                                  (record.severity || 0) >= 5 ? 'bg-medical-warning' : 'bg-medical-success'
-                                }`}
-                                style={{ width: `${((record.severity || 0) / 10) * 100}%` }}
-                              />
-                            </div>
-                            <span className="ml-2 text-xs text-gray-500 dark:text-gray-300">{record.severity || 0}/10</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-medical-primary mr-2"
-                            onClick={() => {
-                              setSelectedRecord(record);
-                              setIsAnalysisOpen(true);
-                              setIsViewAllOpen(false);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => {
-                              handleDeleteAnalysis(record.id);
-                              if (medicalRecords.length === 1) {
-                                setIsViewAllOpen(false);
-                              }
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-muted/30 backdrop-blur-sm sticky top-0 z-10">
+                      <tr className="border-b border-border/30">
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Record ID</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Date</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Student Name</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Diagnosis</th>
+                        <th className="px-8 py-5 text-left text-sm font-semibold text-card-foreground tracking-wider uppercase">Severity</th>
+                        <th className="px-8 py-5 text-center text-sm font-semibold text-card-foreground tracking-wider uppercase">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-card divide-y divide-border/20">
+                      {medicalRecords.map((record, index) => (
+                        <tr key={record.id} className="hover:bg-muted/20 transition-all duration-200">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center">
+                              <span className="font-mono text-sm text-muted-foreground bg-muted/40 px-3 py-1.5 rounded-md border border-border/30">
+                                {record.id.substring(0, 8)}...
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-card-foreground">
+                                {new Date(record.date || "").toLocaleDateString()}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(record.date || "").toLocaleTimeString([], {hour: "2-digit", minute:"2-digit"})}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium text-card-foreground">
+                                {record.patient_name || "N/A"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Patient #{index + 1}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="max-w-xs">
+                              <div className="text-sm font-medium text-card-foreground truncate" title={record.diagnosis || "No diagnosis"}>
+                                {record.diagnosis || "No diagnosis"}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {record.diagnosis ? "Confirmed" : "Pending evaluation"}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1">
+                                <div className="h-3 w-24 bg-muted/50 rounded-full overflow-hidden border border-border/30">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-300 ${
+                                      record.severity >= 8 ? "bg-destructive" : 
+                                      record.severity >= 5 ? "bg-yellow-500" : "bg-green-500"
+                                    }`} 
+                                    style={{ width: `${(record.severity / 10) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                               <span className={`text-sm font-semibold px-2.5 py-1 rounded-full border ${
+                                 record.severity >= 8 ? "text-destructive bg-destructive/10 border-destructive/20" : 
+                                 record.severity >= 5 ? "text-yellow-600 bg-yellow-100 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-800/30" : 
+                                 "text-green-600 bg-green-100 border-green-200 dark:text-green-400 dark:bg-green-900/20 dark:border-green-800/30"
+                               }`}>
+                                 {record.severity}/10
+                               </span>
+                             </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center justify-center gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-primary hover:text-primary/80 hover:bg-primary/10 border border-transparent hover:border-primary/20" 
+                                onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Details
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-muted-foreground hover:text-card-foreground hover:bg-muted/30 border border-transparent hover:border-border/50" 
+                                onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); setIsViewAllOpen(false); }}
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 border border-transparent hover:border-destructive/20" 
+                                onClick={() => { handleDeleteAnalysis(record.id); if (medicalRecords.length === 1) setIsViewAllOpen(false); }}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <div className="text-center py-10">
-                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">No medical records found</h3>
-                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                    Create a new medical record to get started.
-                  </p>
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center py-16 max-w-md">
+                    <FileText className="h-24 w-24 text-muted-foreground/30 mx-auto mb-6" />
+                    <h3 className="text-2xl font-semibold text-card-foreground mb-4">No Medical Records Found</h3>
+                    <p className="text-muted-foreground mb-8">There are currently no medical records in the system. Create your first record to get started.</p>
+                    <Button onClick={() => { setIsViewAllOpen(false); handleNewAnalysis(); }} size="lg" className="gap-2">
+                      <FileText className="h-5 w-5" />
+                      Create First Record
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
-      )}
+      }
+      
+      <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={loadData} />
+      <PatientDetailsModal record={selectedRecordForDetails} isOpen={isRecordDetailsOpen} onClose={() => setIsRecordDetailsOpen(false)} />
     </div>
   );
 };

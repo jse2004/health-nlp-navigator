@@ -1,4 +1,15 @@
 // Types for our data
+export type CollegeDepartment = 'CED' | 'CCS' | 'CCJ' | 'CHS' | 'CAS' | 'CBA';
+
+export const collegeDepartmentNames: Record<CollegeDepartment, string> = {
+  'CED': 'College of Education',
+  'CCS': 'College of Computing Science', 
+  'CCJ': 'College of Criminal Justice',
+  'CHS': 'College of Health Science',
+  'CAS': 'College of Arts and Science',
+  'CBA': 'College of Business Administration'
+};
+
 export interface Patient {
   id: string;
   name: string;
@@ -8,6 +19,7 @@ export interface Patient {
   status: 'Critical' | 'Warning' | 'Normal' | 'Active' | 'Inactive';
   last_visit: string; // Using snake_case for DB compatibility
   medical_history: string[]; // Using snake_case for DB compatibility
+  college_department?: CollegeDepartment;
 }
 
 export interface MedicalRecord {
