@@ -538,12 +538,43 @@ export const getAnalyticsData = async () => {
 
     // Current metrics (only counting active records)
     const totalPatients = patients.length;
-    const criticalCases = patients.filter(p => p.status === 'Critical').length;
-    const pendingReviews = records.filter(r => !r.diagnosis || r.diagnosis.trim() === '').length;
+    
+    // Critical cases: Look for high-priority conditions or urgent keywords in diagnosis, notes, or doctor notes
+    const criticalCases = records.filter(r => {
+      const diagnosis = r.diagnosis?.toLowerCase() || '';
+      const notes = r.notes?.toLowerCase() || '';
+      const doctorNotes = r.doctor_notes?.toLowerCase() || '';
+      
+      const criticalKeywords = [
+        'critical', 'urgent', 'emergency', 'severe', 'acute', 'chest pain',
+        'difficulty breathing', 'unconscious', 'trauma', 'bleeding', 'fracture',
+        'high fever', 'seizure', 'stroke', 'heart attack', 'overdose', 'allergic reaction'
+      ];
+      
+      return criticalKeywords.some(keyword => 
+        diagnosis.includes(keyword) || 
+        notes.includes(keyword) || 
+        doctorNotes.includes(keyword)
+      ) || r.severity >= 8; // Also consider high severity scores as critical
+    }).length;
+    
+    // Pending reviews: medical records without proper diagnosis or marked as incomplete
+    const pendingReviews = records.filter(r => 
+      !r.diagnosis || 
+      r.diagnosis.trim() === '' || 
+      r.diagnosis.toLowerCase().includes('pending') ||
+      r.diagnosis.toLowerCase().includes('to be reviewed') ||
+      r.diagnosis.toLowerCase().includes('tbd') ||
+      r.diagnosis === 'TBD'
+    ).length;
+    
+    // Recent admissions: records created in last 7 days (more robust date handling)
     const recentAdmissions = records.filter(r => {
       if (!r.created_at) return false;
       const recordDate = new Date(r.created_at);
-      return recordDate >= oneWeekAgo;
+      const now = new Date();
+      const daysDiff = Math.floor((now.getTime() - recordDate.getTime()) / (1000 * 60 * 60 * 24));
+      return daysDiff <= 7;
     }).length;
 
     // Historical metrics for comparison
