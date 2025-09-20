@@ -986,27 +986,57 @@ export const downloadEnhancedRecordsCSV = async () => {
       // Fallback to empty data if there's an error
     }
 
-    // Process monthly analytics data for Excel export
-    const monthlyData = monthlyAnalytics?.map(stat => [
-      new Date(stat.month).toISOString().substring(0, 7), // Format as YYYY-MM
-      stat.total_visits || 0,
-      stat.unique_patients || 0,
-      stat.critical_cases || 0,
-      stat.moderate_cases || 0,
-      stat.mild_cases || 0
+    // Process monthly analytics data for Excel export with fallback to medical_records
+    const monthlyDataFromAnalytics = monthlyAnalytics?.map((stat: any) => [
+      new Date(stat.month).toISOString().substring(0, 7), // YYYY-MM
+      Number(stat.total_visits) || 0,
+      Number(stat.unique_patients) || 0,
+      Number(stat.critical_cases) || 0,
+      Number(stat.moderate_cases) || 0,
+      Number(stat.mild_cases) || 0
     ]) || [];
+
+    // Fallback: compute monthly summary from medical_records when analytics is empty
+    const monthlyData = (monthlyDataFromAnalytics.length > 0)
+      ? monthlyDataFromAnalytics
+      : (records || []).reduce((acc: Record<string, any>, record: any) => {
+          const month = record?.date ? new Date(record.date).toISOString().substring(0, 7) : 'Unknown';
+          if (!acc[month]) {
+            acc[month] = {
+              totalVisits: 0,
+              uniquePatients: new Set<string>(),
+              critical: 0,
+              moderate: 0,
+              mild: 0
+            };
+          }
+          acc[month].totalVisits += 1;
+          if (record?.patient_id) acc[month].uniquePatients.add(record.patient_id);
+          const sev = Number(record?.severity) || 0;
+          if (sev >= 7) acc[month].critical += 1;
+          else if (sev >= 4) acc[month].moderate += 1;
+          else acc[month].mild += 1;
+          return acc;
+        }, {} as Record<string, any>);
+
+    const monthlyRows = Array.isArray(monthlyData)
+      ? monthlyData
+      : Object.entries(monthlyData)
+          .sort(([a], [b]) => b.localeCompare(a))
+          .map(([month, stats]: any) => [
+            month,
+            stats.totalVisits,
+            stats.uniquePatients instanceof Set ? stats.uniquePatients.size : (stats.uniquePatients || 0),
+            stats.critical,
+            stats.moderate,
+            stats.mild
+          ]);
 
     // Calculate where to start adding monthly data
     const monthlyStartRow = combinedSummaryData.length;
-    
-    // Add monthly data starting from the appropriate row
-    monthlyData.forEach((row, index) => {
-      const rowIndex = monthlyStartRow + index;
-      row.forEach((cell, colIndex) => {
-        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
-        deptWs[cellAddress] = { v: cell };
-      });
-    });
+
+    // Add monthly data using SheetJS helper to update ranges automatically
+    XLSX.utils.sheet_add_aoa(deptWs, monthlyRows, { origin: { r: monthlyStartRow, c: 0 } });
 
     // Style monthly section header
     const monthlySectionRow = combinedSummaryData.length - 2; // The "--- MONTHLY VISIT SUMMARY ---" row
