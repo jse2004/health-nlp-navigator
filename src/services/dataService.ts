@@ -975,40 +975,26 @@ export const downloadEnhancedRecordsCSV = async () => {
       { wch: 15 }  // Mild Cases
     ];
 
-    // Add monthly summary data to the same sheet
-    const monthlyStats = records?.reduce((acc, record) => {
-      const month = new Date(record.date).toISOString().substring(0, 7); // YYYY-MM format
-      if (!acc[month]) {
-        acc[month] = {
-          totalVisits: 0,
-          uniquePatients: new Set(),
-          critical: 0,
-          moderate: 0,
-          mild: 0
-        };
-      }
-      acc[month].totalVisits++;
-      acc[month].uniquePatients.add(record.patient_id);
-      
-      const severity = record.severity || 0;
-      if (severity >= 7) acc[month].critical++;
-      else if (severity >= 4) acc[month].moderate++;
-      else acc[month].mild++;
-      
-      return acc;
-    }, {} as Record<string, any>) || {};
+    // Fetch monthly visit analytics from the database
+    const { data: monthlyAnalytics, error: monthlyError } = await supabase
+      .from('monthly_visit_analytics')
+      .select('*')
+      .order('month', { ascending: false });
 
-    // Add monthly data to existing sheet
-    const monthlyData = Object.entries(monthlyStats)
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([month, stats]) => [
-        month,
-        stats.totalVisits,
-        stats.uniquePatients.size,
-        stats.critical,
-        stats.moderate,
-        stats.mild
-      ]);
+    if (monthlyError) {
+      console.error('Error fetching monthly analytics for Excel:', monthlyError);
+      // Fallback to empty data if there's an error
+    }
+
+    // Process monthly analytics data for Excel export
+    const monthlyData = monthlyAnalytics?.map(stat => [
+      new Date(stat.month).toISOString().substring(0, 7), // Format as YYYY-MM
+      stat.total_visits || 0,
+      stat.unique_patients || 0,
+      stat.critical_cases || 0,
+      stat.moderate_cases || 0,
+      stat.mild_cases || 0
+    ]) || [];
 
     // Calculate where to start adding monthly data
     const monthlyStartRow = combinedSummaryData.length;
