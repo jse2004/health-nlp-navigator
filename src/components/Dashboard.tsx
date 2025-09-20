@@ -383,7 +383,7 @@ const Dashboard: React.FC = () => {
                   Download All
                 </Button>
                 <Button variant="ghost" size="icon" onClick={() => setIsViewAllOpen(false)} className="hover:bg-accent/50">
-                  <Info className="h-5 w-5" />
+                  X
                 </Button>
               </div>
             </div>
