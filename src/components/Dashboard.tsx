@@ -25,6 +25,7 @@ const Dashboard: React.FC = () => {
   const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<MedicalRecord | null>(null);
   const [isRecordDetailsOpen, setIsRecordDetailsOpen] = useState(false);
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
+  const [severeCases, setSevereCases] = useState<MedicalRecord[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +72,11 @@ const Dashboard: React.FC = () => {
       const [patientsData, recordsData] = await Promise.all([fetchPatients(searchQuery), fetchMedicalRecords(searchQuery)]);
       setPatients(patientsData);
       setMedicalRecords(recordsData);
+      
+      // Load severe cases
+      const severe = recordsData.filter(record => record.severity >= 8);
+      setSevereCases(severe);
+      
       await loadAnalyticsData();
       toast.success('Dashboard data loaded successfully.');
     } catch (error) {
@@ -125,7 +131,7 @@ const Dashboard: React.FC = () => {
     if (confirm('Are you sure you want to delete this medical record?')) {
       try {
         await deleteMedicalRecord(id);
-        await loadData();
+        await loadData(); // This will reload both medical records and severe cases
         toast.success('Medical record deleted successfully.');
       } catch (error) {
         toast.error('Failed to delete medical record.');
@@ -321,49 +327,56 @@ const Dashboard: React.FC = () => {
         <TabsContent value="saved-analyses">
           <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold mb-4">Severe Cases (High Priority)</h2>
-            {(() => {
-              const severeCases = savedAnalyses.filter(analysis => {
-                const severity = analysis.result?.severity || analysis.nlpResult?.severity;
-                return severity >= 8;
-              });
-              return severeCases.length === 0 ? (
-                <div className="text-center py-16">
-                  <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold">No Severe Cases</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto mt-2">High-priority cases with severity 8-10 will appear here for immediate attention.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-border">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="th-cell">Date</th>
-                        <th className="th-cell">Student Name</th>
-                        <th className="th-cell">Symptoms</th>
-                        <th className="th-cell">Severity</th>
-                        <th className="th-cell">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {severeCases.map(analysis => (
-                      <tr key={analysis.id} className="hover:bg-muted/50">
-                        <td className="td-cell">{new Date(analysis.date).toLocaleString()}</td>
-                        <td className="td-cell">{analysis.studentName || "N/A"}</td>
-                        <td className="td-cell max-w-xs truncate">{analysis.symptoms}</td>
-                        <td className="td-cell">{analysis.result?.severity || analysis.nlpResult?.severity || "N/A"}</td>
-                        <td className="td-cell">
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => { setSelectedRecord(analysis); setIsAnalysisOpen(true); }}>Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAnalysis(analysis.id)}>Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
+            {severeCases.length === 0 ? (
+              <div className="text-center py-16">
+                <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold">No Severe Cases</h3>
+                <p className="text-muted-foreground max-w-md mx-auto mt-2">High-priority cases with severity 8-10 will appear here for immediate attention.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-border">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="th-cell">Date</th>
+                      <th className="th-cell">Patient Name</th>
+                      <th className="th-cell">Diagnosis</th>
+                      <th className="th-cell">Doctor Notes</th>
+                      <th className="th-cell">Severity</th>
+                      <th className="th-cell">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                      {severeCases.map(record => (
+                        <tr key={record.id} className="hover:bg-muted/50">
+                          <td className="td-cell">{new Date(record.date).toLocaleDateString()}</td>
+                          <td className="td-cell font-medium">{record.patient_name || "Unknown"}</td>
+                          <td className="td-cell max-w-xs truncate">{record.diagnosis || "Not diagnosed"}</td>
+                          <td className="td-cell max-w-xs truncate">{record.doctor_notes || "No notes"}</td>
+                          <td className="td-cell">
+                            <Badge variant={record.severity >= 9 ? "destructive" : "secondary"} className="font-medium">
+                              {record.severity}/10
+                            </Badge>
+                          </td>
+                          <td className="td-cell">
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedRecordForDetails(record)}>
+                                Details
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAnalysis(record.id)}>
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              );
-            })()}
+            )}
           </div>
         </TabsContent>
       </Tabs>
