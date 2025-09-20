@@ -206,134 +206,160 @@ const Dashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="records">
-          <div className="bg-card text-card-foreground p-8 rounded-xl shadow-sm border border-border/50">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight">Recent Medical Records</h2>
-                <p className="text-muted-foreground mt-2">Latest patient records and analysis data</p>
-              </div>
-              <Badge variant="secondary" className="px-3 py-1">
-                {medicalRecords.length} Records
-              </Badge>
-            </div>
-            
-            {isLoading ? (
-              <div className="text-center py-16">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-muted rounded w-1/4 mx-auto mb-4"></div>
-                  <div className="h-4 bg-muted rounded w-1/3 mx-auto"></div>
+          <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border/50">
+            <div className="p-6 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Medical Records</h2>
+                    <p className="text-muted-foreground">Patient records and medical analysis data</p>
+                  </div>
                 </div>
-                <p className="text-muted-foreground mt-4">Loading records...</p>
-              </div>
-            ) : medicalRecords.length > 0 ? (
-              <div className="overflow-x-auto">
-                <div className="inline-block min-w-full align-middle">
-                  <table className="min-w-full divide-y divide-border/50">
-                    <thead>
-                      <tr className="bg-muted/30">
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Record ID</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Date</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Student Name</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-foreground tracking-wider">Severity</th>
-                        <th className="px-6 py-4 text-center text-sm font-semibold text-foreground tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/30">
-                      {medicalRecords.slice(0, 5).map((record, index) => (
-                        <tr key={record.id} className="hover:bg-muted/20 transition-colors duration-150">
-                          <td className="px-6 py-5">
-                            <div className="flex items-center">
-                              <span className="font-mono text-sm text-muted-foreground bg-muted/50 px-2 py-1 rounded">
-                                {record.id.substring(0, 8)}...
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-5">
-                            <div className="text-sm font-medium text-foreground">
-                              {new Date(record.date || '').toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(record.date || '').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </div>
-                          </td>
-                          <td className="px-6 py-5">
-                            <div className="text-sm font-medium text-foreground">
-                              {record.patient_name || "N/A"}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Patient #{index + 1}
-                            </div>
-                          </td>
-                          <td className="px-6 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className="flex-1">
-                                <div className="h-2.5 w-20 bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded-full transition-all duration-300 ${
-                                      record.severity >= 8 ? 'bg-destructive' : 
-                                      record.severity >= 5 ? 'bg-yellow-500' : 'bg-green-500'
-                                    }`} 
-                                    style={{ width: `${(record.severity / 10) * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                                record.severity >= 8 ? 'text-destructive bg-destructive/10' : 
-                                record.severity >= 5 ? 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/20' : 
-                                'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20'
-                              }`}>
-                                {record.severity}/10
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-5">
-                            <div className="flex items-center justify-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-primary hover:text-primary/80 hover:bg-primary/10" 
-                                onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Details
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-muted-foreground hover:text-foreground hover:bg-muted/50" 
-                                onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
-                              >
-                                Edit
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-destructive hover:text-destructive/80 hover:bg-destructive/10" 
-                                onClick={() => handleDeleteAnalysis(record.id)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-20">
-                <div className="max-w-md mx-auto">
-                  <FileText className="h-20 w-20 text-muted-foreground/30 mx-auto mb-6" />
-                  <h3 className="text-2xl font-semibold text-foreground mb-3">No Medical Records Found</h3>
-                  <p className="text-muted-foreground mb-8">Create a new medical record to get started with patient management.</p>
-                  <Button onClick={handleNewAnalysis} size="lg" className="gap-2">
-                    <FileText className="h-5 w-5" />
-                    Create First Record
+                <div className="flex items-center gap-3">
+                  <Badge variant="secondary" className="px-3 py-1.5 font-medium">
+                    {medicalRecords.length} Total Records
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={downloadAllRecords} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
                   </Button>
                 </div>
               </div>
-            )}
+            </div>
+            
+            <div className="p-6">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-muted rounded w-1/4 mx-auto"></div>
+                    <div className="h-4 bg-muted rounded w-1/3 mx-auto"></div>
+                    <div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
+                  </div>
+                  <p className="text-muted-foreground mt-4">Loading medical records...</p>
+                </div>
+              ) : medicalRecords.length > 0 ? (
+                <div className="space-y-4">
+                  {medicalRecords.slice(0, 8).map((record, index) => (
+                    <div key={record.id} className="group bg-background border border-border/50 rounded-lg p-5 hover:shadow-md hover:border-border transition-all duration-200">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                        {/* Record ID and Status */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <span className="text-primary font-semibold text-sm">#{index + 1}</span>
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-mono text-sm text-foreground bg-muted/50 px-2 py-1 rounded-md inline-block">
+                              ID: {record.id.split('-')[0]}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {new Date(record.date || '').toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Patient Info */}
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {record.patient_name || "Unknown Patient"}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {record.diagnosis ? record.diagnosis.substring(0, 30) + (record.diagnosis.length > 30 ? '...' : '') : 'No diagnosis'}
+                          </div>
+                        </div>
+
+                        {/* Severity Indicator */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-muted-foreground">Severity</span>
+                              <span className="text-xs font-semibold text-foreground">{record.severity}/10</span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  record.severity >= 9 ? 'bg-destructive' : 
+                                  record.severity >= 7 ? 'bg-orange-500' : 
+                                  record.severity >= 5 ? 'bg-yellow-500' : 
+                                  'bg-green-500'
+                                }`} 
+                                style={{ width: `${(record.severity / 10) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                          <Badge 
+                            variant={record.severity >= 8 ? "destructive" : record.severity >= 6 ? "secondary" : "outline"}
+                            className="ml-2"
+                          >
+                            {record.severity >= 8 ? 'Critical' : record.severity >= 6 ? 'High' : record.severity >= 4 ? 'Medium' : 'Low'}
+                          </Badge>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-primary hover:text-primary/80 hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" 
+                            onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity" 
+                            onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
+                          >
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" 
+                            onClick={() => handleDeleteAnalysis(record.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {medicalRecords.length > 8 && (
+                    <div className="text-center pt-6 border-t border-border/50">
+                      <Button variant="outline" onClick={() => setIsViewAllOpen(true)} className="gap-2">
+                        View All {medicalRecords.length} Records
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="max-w-md mx-auto">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <FileText className="h-10 w-10 text-primary" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-foreground mb-3">No Medical Records</h3>
+                    <p className="text-muted-foreground mb-6">Start by creating your first medical record to track patient data and analysis.</p>
+                    <Button onClick={handleNewAnalysis} size="lg" className="gap-2">
+                      <FileText className="h-5 w-5" />
+                      Create First Record
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
 
