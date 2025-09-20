@@ -8,9 +8,10 @@ interface InsightCardProps {
   title: string;
   content: string;
   type: 'clinical' | 'medication' | 'care' | 'trend';
+  onReview?: () => void;
 }
 
-const InsightCard: React.FC<InsightCardProps> = ({ title, content, type }) => {
+const InsightCard: React.FC<InsightCardProps> = ({ title, content, type, onReview }) => {
   // Define icon based on insight type
   const getIcon = () => {
     switch(type) {
@@ -57,7 +58,12 @@ const InsightCard: React.FC<InsightCardProps> = ({ title, content, type }) => {
         </div>
       </CardContent>
       <CardFooter className="pt-0 flex justify-end">
-        <Button variant="ghost" size="sm" className="text-medical-primary">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-primary hover:text-primary/80 hover:bg-primary/10" 
+          onClick={onReview}
+        >
           Review
         </Button>
       </CardFooter>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info, AlertTriangle, ChevronRight } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info, AlertTriangle, ChevronRight, X } from 'lucide-react';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, getAnalyticsData, downloadEnhancedRecordsCSV } from '@/services/dataService';
 import AppointmentScheduler from './AppointmentScheduler';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
@@ -25,6 +26,8 @@ const Dashboard: React.FC = () => {
   const [isSevereCasesModalOpen, setIsSevereCasesModalOpen] = useState(false);
   const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<MedicalRecord | null>(null);
   const [isRecordDetailsOpen, setIsRecordDetailsOpen] = useState(false);
+  const [isInsightReviewOpen, setIsInsightReviewOpen] = useState(false);
+  const [selectedInsight, setSelectedInsight] = useState<{title: string, content: string, type: string, details?: any} | null>(null);
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
   const [severeCases, setSevereCases] = useState<MedicalRecord[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -50,19 +53,52 @@ const Dashboard: React.FC = () => {
     }, {});
     const mostCommonCondition = Object.entries(conditionCounts).sort((a, b) => b[1] - a[1])[0];
     if (mostCommonCondition) {
-      insights.push({ title: "Condition Spotlight", content: `Most common patient condition: ${mostCommonCondition[0]} (${mostCommonCondition[1]} cases).`, type: "trend" });
+      insights.push({ 
+        title: "Condition Spotlight", 
+        content: `Most common patient condition: ${mostCommonCondition[0]} (${mostCommonCondition[1]} cases).`, 
+        type: "trend",
+        details: {
+          condition: mostCommonCondition[0],
+          count: mostCommonCondition[1],
+          relatedPatients: patients.filter(p => p.condition === mostCommonCondition[0])
+        }
+      });
     }
-    const highSeverityRecords = records.filter(r => r.severity && r.severity >= 8).length;
-    if (highSeverityRecords > 0) {
-      insights.push({ title: "High-Severity Cases", content: `${highSeverityRecords} records with a severity rating of 8+ require immediate review.`, type: "clinical" });
+    const highSeverityRecords = records.filter(r => r.severity && r.severity >= 8);
+    if (highSeverityRecords.length > 0) {
+      insights.push({ 
+        title: "High-Severity Cases", 
+        content: `${highSeverityRecords.length} records with a severity rating of 8+ require immediate review.`, 
+        type: "clinical",
+        details: {
+          count: highSeverityRecords.length,
+          records: highSeverityRecords
+        }
+      });
     }
-    const recentRecords = records.filter(r => r.date && new Date(r.date) >= new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)).length;
-    if (recentRecords > 0) {
-      insights.push({ title: "Recent Activity", content: `${recentRecords} new medical records have been added in the last 72 hours.`, type: "care" });
+    const recentRecords = records.filter(r => r.date && new Date(r.date) >= new Date(Date.now() - 3 * 24 * 60 * 60 * 1000));
+    if (recentRecords.length > 0) {
+      insights.push({ 
+        title: "Recent Activity", 
+        content: `${recentRecords.length} new medical records have been added in the last 72 hours.`, 
+        type: "care",
+        details: {
+          count: recentRecords.length,
+          records: recentRecords
+        }
+      });
     }
-    const pendingDiagnosis = records.filter(r => !r.diagnosis || r.diagnosis.trim() === 'Pending evaluation').length;
-    if (pendingDiagnosis > 0) {
-      insights.push({ title: "Pending Diagnoses", content: `${pendingDiagnosis} records are awaiting a final diagnosis.`, type: "medication" });
+    const pendingDiagnosis = records.filter(r => !r.diagnosis || r.diagnosis.trim() === 'Pending evaluation');
+    if (pendingDiagnosis.length > 0) {
+      insights.push({ 
+        title: "Pending Diagnoses", 
+        content: `${pendingDiagnosis.length} records are awaiting a final diagnosis.`, 
+        type: "medication",
+        details: {
+          count: pendingDiagnosis.length,
+          records: pendingDiagnosis
+        }
+      });
     }
     return insights.slice(0, 4);
   };
@@ -140,6 +176,11 @@ const Dashboard: React.FC = () => {
 
   const handleNewAnalysis = () => setIsNewAnalysisOpen(true);
 
+  const handleInsightReview = (insight: any) => {
+    setSelectedInsight(insight);
+    setIsInsightReviewOpen(true);
+  };
+
   const handleDeleteAnalysis = async (id: string) => {
     if (confirm('Are you sure you want to delete this medical record?')) {
       try {
@@ -194,7 +235,14 @@ const Dashboard: React.FC = () => {
         <TabsContent value="insights">
           {realInsights.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {realInsights.map((insight, i) => <InsightCard key={i} {...insight} type={insight.type as any} />)}
+              {realInsights.map((insight, i) => 
+                <InsightCard 
+                  key={i} 
+                  {...insight} 
+                  type={insight.type as any} 
+                  onReview={() => handleInsightReview(insight)}
+                />
+              )}
             </div>
           ) : (
             <div className="text-center py-16 bg-card border rounded-lg">
@@ -627,6 +675,103 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       }
+      
+      {/* Insight Review Modal */}
+      <Dialog open={isInsightReviewOpen} onOpenChange={setIsInsightReviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <BrainCircuit className="h-5 w-5 text-primary" />
+              </div>
+              {selectedInsight?.title} - Detailed Review
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedInsight && (
+            <div className="space-y-6">
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <h4 className="font-medium text-foreground mb-2">Summary</h4>
+                <p className="text-muted-foreground">{selectedInsight.content}</p>
+              </div>
+
+              {selectedInsight.details && (
+                <div className="space-y-4">
+                  {selectedInsight.type === 'trend' && selectedInsight.details.relatedPatients && (
+                    <div>
+                      <h4 className="font-medium text-foreground mb-3">Related Patients ({selectedInsight.details.count})</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {selectedInsight.details.relatedPatients.slice(0, 6).map((patient: Patient, i: number) => (
+                          <div key={i} className="p-3 bg-background border rounded-lg">
+                            <div className="font-medium">{patient.name}</div>
+                            <div className="text-sm text-muted-foreground">Age: {patient.age} • {patient.condition}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedInsight.details.relatedPatients.length > 6 && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          And {selectedInsight.details.relatedPatients.length - 6} more patients...
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {(selectedInsight.type === 'clinical' || selectedInsight.type === 'care' || selectedInsight.type === 'medication') && selectedInsight.details.records && (
+                    <div>
+                      <h4 className="font-medium text-foreground mb-3">
+                        {selectedInsight.type === 'clinical' ? 'High-Severity Records' : 
+                         selectedInsight.type === 'care' ? 'Recent Records' : 'Pending Diagnosis Records'} 
+                        ({selectedInsight.details.count})
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedInsight.details.records.slice(0, 5).map((record: MedicalRecord, i: number) => (
+                          <div key={i} className="p-4 bg-background border rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-medium">{record.patient_name || 'Unknown Patient'}</div>
+                              <div className="flex items-center gap-2">
+                                {selectedInsight.type === 'clinical' && (
+                                  <Badge variant={record.severity >= 9 ? "destructive" : "secondary"}>
+                                    Severity: {record.severity}/10
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(record.date || '').toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {record.diagnosis || 'Pending evaluation'}
+                            </div>
+                            {record.doctor_notes && (
+                              <div className="text-sm text-muted-foreground mt-1 truncate">
+                                Notes: {record.doctor_notes.substring(0, 100)}...
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {selectedInsight.details.records.length > 5 && (
+                          <p className="text-sm text-muted-foreground text-center">
+                            And {selectedInsight.details.records.length - 5} more records...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      This insight was generated automatically based on current data patterns.
+                    </div>
+                    <Button variant="outline" onClick={() => setIsInsightReviewOpen(false)}>
+                      Close Review
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       
       <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={loadData} />
       <PatientDetailsModal record={selectedRecordForDetails} isOpen={isRecordDetailsOpen} onClose={() => setIsRecordDetailsOpen(false)} />
