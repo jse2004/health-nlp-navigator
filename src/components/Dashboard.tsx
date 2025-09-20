@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info, AlertTriangle } from 'lucide-react';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -165,7 +165,7 @@ const Dashboard: React.FC = () => {
             <TabsTrigger value="patients" className="flex items-center gap-1.5"><Heart className="h-4 w-4" />Patients</TabsTrigger>
             <TabsTrigger value="insights" className="flex items-center gap-1.5"><BrainCircuit className="h-4 w-4" />AI Insights</TabsTrigger>
             <TabsTrigger value="records" className="flex items-center gap-1.5"><FileText className="h-4 w-4" />Medical Records</TabsTrigger>
-            <TabsTrigger value="saved-analyses" className="flex items-center gap-1.5"><Save className="h-4 w-4" />Saved Records</TabsTrigger>
+            <TabsTrigger value="saved-analyses" className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4" />Severe Cases</TabsTrigger>
           </TabsList>
           <Button variant="ghost" size="sm" className="text-primary flex items-center gap-1" onClick={() => setIsViewAllOpen(true)}>View All<ArrowUpRight className="h-4 w-4" /></Button>
         </div>
@@ -320,27 +320,32 @@ const Dashboard: React.FC = () => {
 
         <TabsContent value="saved-analyses">
           <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
-            <h2 className="text-lg font-semibold mb-4">Saved Preliminary Records</h2>
-            {savedAnalyses.length === 0 ? (
-              <div className="text-center py-16">
-                <Save className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold">No Saved Records</h3>
-                <p className="text-muted-foreground max-w-md mx-auto mt-2">Records you save from the "New Medical Record" form will appear here for later access.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="th-cell">Date</th>
-                      <th className="th-cell">Student Name</th>
-                      <th className="th-cell">Symptoms</th>
-                      <th className="th-cell">Severity</th>
-                      <th className="th-cell">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {savedAnalyses.map(analysis => (
+            <h2 className="text-lg font-semibold mb-4">Severe Cases (High Priority)</h2>
+            {(() => {
+              const severeCases = savedAnalyses.filter(analysis => {
+                const severity = analysis.result?.severity || analysis.nlpResult?.severity;
+                return severity >= 8;
+              });
+              return severeCases.length === 0 ? (
+                <div className="text-center py-16">
+                  <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold">No Severe Cases</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto mt-2">High-priority cases with severity 8-10 will appear here for immediate attention.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="th-cell">Date</th>
+                        <th className="th-cell">Student Name</th>
+                        <th className="th-cell">Symptoms</th>
+                        <th className="th-cell">Severity</th>
+                        <th className="th-cell">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {severeCases.map(analysis => (
                       <tr key={analysis.id} className="hover:bg-muted/50">
                         <td className="td-cell">{new Date(analysis.date).toLocaleString()}</td>
                         <td className="td-cell">{analysis.studentName || "N/A"}</td>
@@ -353,11 +358,12 @@ const Dashboard: React.FC = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         </TabsContent>
       </Tabs>
