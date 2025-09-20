@@ -1008,7 +1008,7 @@ export const downloadEnhancedRecordsCSV = async () => {
     XLSX.utils.book_append_sheet(wb, deptWs, "Summary Report");
 
     // Generate and download the Excel file
-    const fileName = `enhanced_medical_records_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `UDM-MEDICAL-RECORD${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     
     return true;
