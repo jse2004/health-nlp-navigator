@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info, AlertTriangle } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info, AlertTriangle, ChevronRight } from 'lucide-react';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -22,6 +22,7 @@ const Dashboard: React.FC = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isNewAnalysisOpen, setIsNewAnalysisOpen] = useState(false);
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
+  const [isSevereCasesModalOpen, setIsSevereCasesModalOpen] = useState(false);
   const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<MedicalRecord | null>(null);
   const [isRecordDetailsOpen, setIsRecordDetailsOpen] = useState(false);
   const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
@@ -123,6 +124,18 @@ const Dashboard: React.FC = () => {
     } else {
       toast.error('No medical record found for this patient.');
     }
+  };
+
+  const getSeverityColor = (severity: number) => {
+    if (severity >= 9) return "destructive";
+    if (severity === 8) return "secondary";
+    return "outline";
+  };
+
+  const getSeverityBg = (severity: number) => {
+    if (severity >= 9) return "bg-destructive/10 border-destructive/20";
+    if (severity === 8) return "bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800";
+    return "bg-muted/30";
   };
 
   const handleNewAnalysis = () => setIsNewAnalysisOpen(true);
@@ -325,58 +338,112 @@ const Dashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="saved-analyses">
-          <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
-            <h2 className="text-lg font-semibold mb-4">Severe Cases (High Priority)</h2>
-            {severeCases.length === 0 ? (
-              <div className="text-center py-16">
-                <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold">No Severe Cases</h3>
-                <p className="text-muted-foreground max-w-md mx-auto mt-2">High-priority cases with severity 8-10 will appear here for immediate attention.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-border">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="th-cell">Date</th>
-                      <th className="th-cell">Patient Name</th>
-                      <th className="th-cell">Diagnosis</th>
-                      <th className="th-cell">Doctor Notes</th>
-                      <th className="th-cell">Severity</th>
-                      <th className="th-cell">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                      {severeCases.map(record => (
-                        <tr key={record.id} className="hover:bg-muted/50">
-                          <td className="td-cell">{new Date(record.date).toLocaleDateString()}</td>
-                          <td className="td-cell font-medium">{record.patient_name || "Unknown"}</td>
-                          <td className="td-cell max-w-xs truncate">{record.diagnosis || "Not diagnosed"}</td>
-                          <td className="td-cell max-w-xs truncate">{record.doctor_notes || "No notes"}</td>
-                          <td className="td-cell">
-                            <Badge variant={record.severity >= 9 ? "destructive" : "secondary"} className="font-medium">
-                              {record.severity}/10
-                            </Badge>
-                          </td>
-                          <td className="td-cell">
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => setSelectedRecordForDetails(record)}>
-                                Details
-                              </Button>
-                              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAnalysis(record.id)}>
-                                Delete
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+          <div className="bg-card text-card-foreground rounded-lg shadow-sm border">
+            <div className="p-6 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-destructive/10 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Severe Cases</h2>
+                    <p className="text-sm text-muted-foreground">High-priority cases requiring immediate attention</p>
+                  </div>
                 </div>
-            )}
+                <div className="flex items-center gap-2">
+                  <Badge variant="destructive" className="px-3 py-1">
+                    {severeCases.length} Active
+                  </Badge>
+                  {severeCases.length > 5 && (
+                    <Button variant="outline" size="sm" onClick={() => setIsSevereCasesModalOpen(true)}>
+                      View All <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              {severeCases.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="p-4 bg-muted/30 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                    <AlertTriangle className="h-8 w-8 text-muted-foreground/50" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-muted-foreground">No Severe Cases</h3>
+                  <p className="text-sm text-muted-foreground/80 max-w-md mx-auto mt-2">
+                    Currently no high-priority cases (severity 8-10) require immediate attention.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {severeCases.slice(0, 5).map(record => (
+                    <div 
+                      key={record.id} 
+                      className={`p-4 rounded-lg border transition-all hover:shadow-md ${getSeverityBg(record.severity)}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-3">
+                            <Badge variant={getSeverityColor(record.severity)} className="font-bold">
+                              SEVERITY {record.severity}/10
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(record.date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Patient</h4>
+                              <p className="font-medium">{record.patient_name || "Unknown"}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Diagnosis</h4>
+                              <p className="text-sm">{record.diagnosis || "Not diagnosed"}</p>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Notes</h4>
+                              <p className="text-sm line-clamp-2">{record.doctor_notes || "No notes"}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 ml-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
+                            className="h-8"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
+                            className="h-8"
+                          >
+                            Details
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {severeCases.length > 5 && (
+                    <div className="pt-4 border-t border-border/50">
+                      <Button 
+                        variant="ghost" 
+                        className="w-full" 
+                        onClick={() => setIsSevereCasesModalOpen(true)}
+                      >
+                        View All {severeCases.length} Severe Cases <ChevronRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>
