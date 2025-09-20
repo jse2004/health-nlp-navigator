@@ -888,34 +888,63 @@ export const downloadEnhancedRecordsCSV = async () => {
       return acc;
     }, {} as Record<string, any>) || {};
 
-    const deptHeaders = ["College Department", "Total Patients", "Active Patients", "Total Visits", "Average Age"];
-    const deptData = Object.entries(departmentStats).map(([dept, stats]) => {
-      const avgAge = stats.totalPatients > 0 ? (stats.totalAge / stats.totalPatients).toFixed(1) : '0';
-      const deptName = dept !== 'Not Specified' ? collegeDepartmentNames[dept as CollegeDepartment] || dept : dept;
-      return [deptName, stats.totalPatients, stats.activePatients, stats.totalVisits, avgAge];
-    });
+    // Add summary header and data with proper formatting
+    const deptSummaryData = [
+      ["--- DEPARTMENT SUMMARY ---", "", "", "", ""],
+      ["College Department", "Total Patients", "Active Patients", "Total Visits", "Average Age"],
+      ...Object.entries(departmentStats)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([dept, stats]) => {
+          const avgAge = stats.totalPatients > 0 ? Math.round(stats.totalAge / stats.totalPatients) : 0;
+          const deptName = dept !== 'Not Specified' ? collegeDepartmentNames[dept as CollegeDepartment] || dept : dept;
+          return [deptName, stats.totalPatients, stats.activePatients, stats.totalVisits, avgAge];
+        })
+    ];
 
-    const deptWsData = [deptHeaders, ...deptData];
-    const deptWs = XLSX.utils.aoa_to_sheet(deptWsData);
+    // Add empty rows and monthly summary to same sheet
+    const combinedSummaryData = [
+      ...deptSummaryData,
+      [""], // Empty row separator
+      ["--- MONTHLY VISIT SUMMARY ---", "", "", "", "", ""],
+      ["Month", "Total Visits", "Unique Patients", "Critical Cases", "Moderate Cases", "Mild Cases"]
+    ];
+
+    const deptWs = XLSX.utils.aoa_to_sheet(combinedSummaryData);
     
-    // Style department summary headers
-    for (let i = 0; i < deptHeaders.length; i++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
+    // Style the section headers (row 0 and monthly header row)
+    const sectionHeaderStyle = {
+      font: { bold: true, size: 12 },
+      alignment: { horizontal: "left", vertical: "center" }
+    };
+
+    const dataHeaderStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "366092" } },
+      alignment: { horizontal: "center", vertical: "center" }
+    };
+
+    // Style department summary section header
+    const deptSectionCell = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    if (!deptWs[deptSectionCell]) deptWs[deptSectionCell] = {};
+    deptWs[deptSectionCell].s = sectionHeaderStyle;
+
+    // Style department data headers (row 1)
+    for (let i = 0; i < 5; i++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 1, c: i });
       if (!deptWs[cellAddress]) deptWs[cellAddress] = {};
-      deptWs[cellAddress].s = headerStyle;
+      deptWs[cellAddress].s = dataHeaderStyle;
     }
 
     deptWs['!cols'] = [
-      { wch: 30 }, // College Department
-      { wch: 15 }, // Total Patients
-      { wch: 15 }, // Active Patients
-      { wch: 15 }, // Total Visits
-      { wch: 15 }  // Average Age
+      { wch: 30 }, // College Department / Month
+      { wch: 15 }, // Total Patients / Total Visits
+      { wch: 15 }, // Active Patients / Unique Patients
+      { wch: 15 }, // Total Visits / Critical Cases
+      { wch: 15 }, // Average Age / Moderate Cases
+      { wch: 15 }  // Mild Cases
     ];
 
-    XLSX.utils.book_append_sheet(wb, deptWs, "Department Summary");
-
-    // Create Monthly Summary worksheet
+    // Add monthly summary data to the same sheet
     const monthlyStats = records?.reduce((acc, record) => {
       const month = new Date(record.date).toISOString().substring(0, 7); // YYYY-MM format
       if (!acc[month]) {
@@ -938,7 +967,7 @@ export const downloadEnhancedRecordsCSV = async () => {
       return acc;
     }, {} as Record<string, any>) || {};
 
-    const monthlyHeaders = ["Month", "Total Visits", "Unique Patients", "Critical Cases", "Moderate Cases", "Mild Cases"];
+    // Add monthly data to existing sheet
     const monthlyData = Object.entries(monthlyStats)
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([month, stats]) => [
@@ -950,26 +979,33 @@ export const downloadEnhancedRecordsCSV = async () => {
         stats.mild
       ]);
 
-    const monthlyWsData = [monthlyHeaders, ...monthlyData];
-    const monthlyWs = XLSX.utils.aoa_to_sheet(monthlyWsData);
+    // Calculate where to start adding monthly data
+    const monthlyStartRow = combinedSummaryData.length;
+    
+    // Add monthly data starting from the appropriate row
+    monthlyData.forEach((row, index) => {
+      const rowIndex = monthlyStartRow + index;
+      row.forEach((cell, colIndex) => {
+        const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+        deptWs[cellAddress] = { v: cell };
+      });
+    });
 
-    // Style monthly summary headers
-    for (let i = 0; i < monthlyHeaders.length; i++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (!monthlyWs[cellAddress]) monthlyWs[cellAddress] = {};
-      monthlyWs[cellAddress].s = headerStyle;
+    // Style monthly section header
+    const monthlySectionRow = combinedSummaryData.length - 2; // The "--- MONTHLY VISIT SUMMARY ---" row
+    const monthlySectionCell = XLSX.utils.encode_cell({ r: monthlySectionRow, c: 0 });
+    if (!deptWs[monthlySectionCell]) deptWs[monthlySectionCell] = {};
+    deptWs[monthlySectionCell].s = sectionHeaderStyle;
+
+    // Style monthly data headers
+    const monthlyHeaderRow = combinedSummaryData.length - 1;
+    for (let i = 0; i < 6; i++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: monthlyHeaderRow, c: i });
+      if (!deptWs[cellAddress]) deptWs[cellAddress] = {};
+      deptWs[cellAddress].s = dataHeaderStyle;
     }
 
-    monthlyWs['!cols'] = [
-      { wch: 12 }, // Month
-      { wch: 15 }, // Total Visits
-      { wch: 18 }, // Unique Patients
-      { wch: 15 }, // Critical Cases
-      { wch: 18 }, // Moderate Cases
-      { wch: 15 }  // Mild Cases
-    ];
-
-    XLSX.utils.book_append_sheet(wb, monthlyWs, "Monthly Summary");
+    XLSX.utils.book_append_sheet(wb, deptWs, "Summary Report");
 
     // Generate and download the Excel file
     const fileName = `enhanced_medical_records_${new Date().toISOString().split('T')[0]}.xlsx`;

@@ -237,7 +237,7 @@ const NotificationSystem: React.FC = () => {
                           ))}
                         </div>
                       )}
-                    </div>
+                    </AlertDescription>
                   </div>
                 </div>
                 <div className="flex gap-2">
