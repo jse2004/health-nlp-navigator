@@ -1,19 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, Users, Shield } from 'lucide-react';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import PatientsList from '@/components/PatientsList';
 import ClearanceManagement from '@/components/ClearanceManagement';
+import SearchBar from '@/components/SearchBar';
+import { fetchPatients } from '@/services/dataService';
+import { Patient } from '@/data/sampleData';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
+
+  // Load patients when the patients section is active
+  useEffect(() => {
+    if (activeSection === 'patients') {
+      loadPatients();
+    }
+  }, [activeSection, searchQuery]);
+
+  const loadPatients = async () => {
+    setIsLoadingPatients(true);
+    try {
+      const patientsData = await fetchPatients(searchQuery);
+      setPatients(patientsData);
+    } catch (error) {
+      console.error('Error loading patients:', error);
+      setPatients([]);
+    } finally {
+      setIsLoadingPatients(false);
+    }
+  };
+
+  const handlePatientSearch = (query: string) => {
+    setSearchQuery(query);
+  };
 
   const renderSection = () => {
     switch (activeSection) {
       case 'dashboard':
         return <Dashboard />;
       case 'patients':
-        return <PatientsList patients={[]} />;  // Pass empty array for now
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Patients</h1>
+              <SearchBar 
+                onSearch={handlePatientSearch}
+                placeholder="Search patients by name, condition, or status..."
+              />
+            </div>
+            <PatientsList 
+              patients={patients} 
+              isLoading={isLoadingPatients}
+            />
+          </div>
+        );
       case 'clearance':
         return <ClearanceManagement />;
       default:
