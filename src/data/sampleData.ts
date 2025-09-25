@@ -34,7 +34,7 @@ export interface MedicalRecord {
   notes?: string;
   status?: 'active' | 'inactive'; // Status for soft delete functionality
   // New person type fields
-  person_type?: 'professor' | 'employee' | 'guest';
+  person_type?: 'student' | 'professor' | 'employee' | 'guest';
   full_name?: string;
   age?: number;
   gender?: string;

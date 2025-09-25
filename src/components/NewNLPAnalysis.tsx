@@ -28,13 +28,18 @@ interface NewNLPAnalysisProps {
   onSaved?: () => void;
 }
 
-interface StudentRecord {
-  studentName: string;
-  studentId: string;
-  courseYear: string;
+interface PersonRecord {
+  personType: 'student' | 'professor' | 'employee' | 'guest' | '';
+  name: string;
   age: string;
   gender: 'Male' | 'Female' | 'Other' | '';
+  // Student specific
+  studentId: string;
+  courseYear: string;
   collegeDepartment: CollegeDepartment | '';
+  // Professor/Employee specific
+  position: string;
+  faculty: string;
   symptoms: string;
   diagnosis: string;
   medication: string;
@@ -75,14 +80,17 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const form = useForm<StudentRecord>({
+  const form = useForm<PersonRecord>({
     defaultValues: {
-      studentName: '',
-      studentId: '',
-      courseYear: '',
+      personType: '',
+      name: '',
       age: '',
       gender: '',
+      studentId: '',
+      courseYear: '',
       collegeDepartment: '',
+      position: '',
+      faculty: '',
       symptoms: '',
       diagnosis: '',
       medication: ''
@@ -127,27 +135,36 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
     return actions;
   };
 
-  const handleSaveAnalysis = async (data: StudentRecord) => {
-    if (!data.studentName || !data.symptoms || !data.age) {
-      toast.error('Please enter student name, age, and symptoms');
+  const handleSaveAnalysis = async (data: PersonRecord) => {
+    if (!data.name || !data.symptoms || !data.age || !data.personType) {
+      toast.error('Please enter name, age, person type, and symptoms');
       return;
     }
     setIsSaving(true);
     try {
       const recommendedActions = analysisResult ? generateRecommendedActions(analysisResult) : [];
       const newRecord = {
-        patient_name: data.studentName,
+        patient_name: data.name,
         diagnosis: data.diagnosis || 'Pending evaluation',
         doctor_notes: data.symptoms,
         notes: data.medication || 'N/A',
         severity: analysisResult?.severity || 5,
         date: new Date().toISOString(),
         recommended_actions: recommendedActions,
+        person_type: data.personType,
+        full_name: data.name,
+        gender: data.gender || 'Other',
+        age: parseInt(data.age) || 0,
+        position: data.position || null,
+        faculty: data.faculty || null,
         patient_data: {
-          name: data.studentName,
-          student_id: data.studentId,
-          course_year: data.courseYear,
+          name: data.name,
+          person_type: data.personType,
+          student_id: data.studentId || undefined,
+          course_year: data.courseYear || undefined,
           college_department: data.collegeDepartment || undefined,
+          position: data.position || undefined,
+          faculty: data.faculty || undefined,
           age: parseInt(data.age) || 0,
           gender: data.gender || 'Other'
         }
@@ -181,26 +198,65 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSaveAnalysis)} className="space-y-6">
               <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><User />Student Information</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="studentName" render={({ field }) => (<FormItem><FormLabel>Student Name</FormLabel><FormControl><Input placeholder="Full name" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="studentId" render={({ field }) => (<FormItem><FormLabel>Student ID</FormLabel><FormControl><Input placeholder="ID number" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="courseYear" render={({ field }) => (<FormItem><FormLabel>Course & Year</FormLabel><FormControl><Input placeholder="e.g., BSN-3" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="age" render={({ field }) => (<FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" placeholder="Enter age" {...field} /></FormControl></FormItem>)} />
-                  <FormField control={form.control} name="gender" render={({ field }) => (
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><User />Person Information</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField control={form.control} name="personType" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Gender</FormLabel>
+                      <FormLabel>Person Type</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select person type" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="Male">Male</SelectItem>
-                          <SelectItem value="Female">Female</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="professor">Professor</SelectItem>
+                          <SelectItem value="employee">Employee</SelectItem>
+                          <SelectItem value="guest">Guest</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
                   )} />
-                  <FormField control={form.control} name="collegeDepartment" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>College Department</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select college department" /></SelectTrigger></FormControl><SelectContent>{Object.entries(collegeDepartmentNames).map(([code, name]) => (<SelectItem key={code} value={code}>{name} ({code})</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Full name" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="age" render={({ field }) => (<FormItem><FormLabel>Age</FormLabel><FormControl><Input type="number" placeholder="Enter age" {...field} /></FormControl></FormItem>)} />
+                    <FormField control={form.control} name="gender" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Gender</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )} />
+                    
+                    {/* Student specific fields */}
+                    {form.watch('personType') === 'student' && (
+                      <>
+                        <FormField control={form.control} name="studentId" render={({ field }) => (<FormItem><FormLabel>Student ID</FormLabel><FormControl><Input placeholder="ID number" {...field} /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="courseYear" render={({ field }) => (<FormItem><FormLabel>Course & Year</FormLabel><FormControl><Input placeholder="e.g., BSN-3" {...field} /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="collegeDepartment" render={({ field }) => (<FormItem className="md:col-span-2"><FormLabel>College Department</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select college department" /></SelectTrigger></FormControl><SelectContent>{Object.entries(collegeDepartmentNames).map(([code, name]) => (<SelectItem key={code} value={code}>{name} ({code})</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                      </>
+                    )}
+                    
+                    {/* Professor specific fields */}
+                    {form.watch('personType') === 'professor' && (
+                      <>
+                        <FormField control={form.control} name="position" render={({ field }) => (<FormItem><FormLabel>Position</FormLabel><FormControl><Input placeholder="e.g., Associate Professor" {...field} /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="collegeDepartment" render={({ field }) => (<FormItem><FormLabel>College Department</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select college department" /></SelectTrigger></FormControl><SelectContent>{Object.entries(collegeDepartmentNames).map(([code, name]) => (<SelectItem key={code} value={code}>{name} ({code})</SelectItem>))}</SelectContent></Select></FormItem>)} />
+                      </>
+                    )}
+                    
+                    {/* Employee specific fields */}
+                    {form.watch('personType') === 'employee' && (
+                      <>
+                        <FormField control={form.control} name="position" render={({ field }) => (<FormItem><FormLabel>Position</FormLabel><FormControl><Input placeholder="e.g., Administrative Officer" {...field} /></FormControl></FormItem>)} />
+                        <FormField control={form.control} name="faculty" render={({ field }) => (<FormItem><FormLabel>Faculty</FormLabel><FormControl><Input placeholder="e.g., College of Nursing" {...field} /></FormControl></FormItem>)} />
+                      </>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
               
@@ -252,7 +308,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
               
               <div className="flex justify-end gap-2 pt-4">
                 <Button variant="outline" type="button" onClick={handleClose}>Cancel</Button>
-                <Button type="submit" disabled={isSaving || !form.getValues('studentName')} className="w-full md:w-auto">
+                <Button type="submit" disabled={isSaving || !form.getValues('name')} className="w-full md:w-auto">
                   {isSaving ? "Saving..." : "Save Medical Record"}
                 </Button>
               </div>

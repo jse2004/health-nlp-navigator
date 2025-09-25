@@ -164,9 +164,12 @@ export const fetchMedicalRecords = async (searchQuery?: string, patientId?: stri
 // Interface for patient data in medical record
 interface PatientDataForRecord {
   name: string;
+  person_type?: 'student' | 'professor' | 'employee' | 'guest';
   student_id?: string;
   course_year?: string;
   college_department?: CollegeDepartment;
+  position?: string;
+  faculty?: string;
   age?: number;
   gender?: 'Male' | 'Female' | 'Other';
 }
