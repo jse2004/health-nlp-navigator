@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Clipboard, FileText, BarChart, Award, Stethoscope, Download, Save, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { saveMedicalRecord, createMedicalCertificate, fetchMedicalCertificatesByRecord, type MedicalCertificate } from '@/services/dataService';
@@ -42,7 +43,17 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
   // Initialize edited record when the record changes
   useEffect(() => {
     if (record) {
-      setEditedRecord({ ...record });
+      setEditedRecord({ 
+        ...record,
+        // Initialize person type fields if not present
+        person_type: record.person_type || 'professor',
+        full_name: record.full_name || record.patient_name || '',
+        age: record.age || 20,
+        gender: record.gender || 'Male',
+        position: record.position || '',
+        faculty: record.faculty || '',
+        college_department: record.college_department || 'CED'
+      });
       
       // Analyze the doctor's notes using our NLP utility
       const doctorNotes = record.doctor_notes || record.notes || '';
@@ -235,6 +246,119 @@ ${(editedRecord.recommended_actions || []).map((action, i) => `${i + 1}. ${actio
             )}
           </div>
           
+          {/* Person Type Selection - only show when editing */}
+          {isEditing && (
+            <Card className="mb-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Person Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="person_type">Person Type</Label>
+                    <Select
+                      value={editedRecord.person_type || 'professor'}
+                      onValueChange={(value) => handleInputChange('person_type', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="professor">Professor</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="guest">Guest</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="full_name">Full Name</Label>
+                    <Input
+                      id="full_name"
+                      value={editedRecord.full_name || ''}
+                      onChange={(e) => handleInputChange('full_name', e.target.value)}
+                      placeholder="Enter full name"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="age">Age</Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      value={editedRecord.age || ''}
+                      onChange={(e) => handleInputChange('age', parseInt(e.target.value) || 0)}
+                      placeholder="Enter age"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select
+                      value={editedRecord.gender || 'Male'}
+                      onValueChange={(value) => handleInputChange('gender', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {(editedRecord.person_type === 'professor' || editedRecord.person_type === 'employee') && (
+                  <div>
+                    <Label htmlFor="position">Position</Label>
+                    <Input
+                      id="position"
+                      value={editedRecord.position || ''}
+                      onChange={(e) => handleInputChange('position', e.target.value)}
+                      placeholder="Enter position"
+                    />
+                  </div>
+                )}
+
+                {editedRecord.person_type === 'professor' && (
+                  <div>
+                    <Label htmlFor="college_department">College Department</Label>
+                    <Select
+                      value={editedRecord.college_department || 'CED'}
+                      onValueChange={(value) => handleInputChange('college_department', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CED">College of Education</SelectItem>
+                        <SelectItem value="CCS">College of Computing Science</SelectItem>
+                        <SelectItem value="CCJ">College of Criminal Justice</SelectItem>
+                        <SelectItem value="CHS">College of Health Science</SelectItem>
+                        <SelectItem value="CAS">College of Arts and Science</SelectItem>
+                        <SelectItem value="CBA">College of Business Administration</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {editedRecord.person_type === 'employee' && (
+                  <div>
+                    <Label htmlFor="faculty">Faculty</Label>
+                    <Input
+                      id="faculty"
+                      value={editedRecord.faculty || ''}
+                      onChange={(e) => handleInputChange('faculty', e.target.value)}
+                      placeholder="Enter faculty"
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <div className="mb-4 flex justify-end space-x-2">
             <Button 
               variant="outline" 

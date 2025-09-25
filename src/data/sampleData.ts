@@ -33,6 +33,14 @@ export interface MedicalRecord {
   patient_name?: string; // Using snake_case for DB compatibility
   notes?: string;
   status?: 'active' | 'inactive'; // Status for soft delete functionality
+  // New person type fields
+  person_type?: 'professor' | 'employee' | 'guest';
+  full_name?: string;
+  age?: number;
+  gender?: string;
+  position?: string;
+  college_department?: CollegeDepartment;
+  faculty?: string;
 }
 
 export interface AnalyticsSummary {

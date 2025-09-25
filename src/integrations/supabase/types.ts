@@ -56,6 +56,83 @@ export type Database = {
         }
         Relationships: []
       }
+      clearance_records: {
+        Row: {
+          age: number
+          approved_at: string | null
+          approved_by: string | null
+          clearance_reason: string | null
+          clearance_status: string
+          college_department:
+            | Database["public"]["Enums"]["college_department"]
+            | null
+          created_at: string | null
+          faculty: string | null
+          full_name: string
+          gender: string
+          id: string
+          medical_record_id: string | null
+          patient_id: string
+          patient_name: string
+          person_type: string
+          position: string | null
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          age: number
+          approved_at?: string | null
+          approved_by?: string | null
+          clearance_reason?: string | null
+          clearance_status?: string
+          college_department?:
+            | Database["public"]["Enums"]["college_department"]
+            | null
+          created_at?: string | null
+          faculty?: string | null
+          full_name: string
+          gender: string
+          id?: string
+          medical_record_id?: string | null
+          patient_id: string
+          patient_name: string
+          person_type: string
+          position?: string | null
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          age?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          clearance_reason?: string | null
+          clearance_status?: string
+          college_department?:
+            | Database["public"]["Enums"]["college_department"]
+            | null
+          created_at?: string | null
+          faculty?: string | null
+          full_name?: string
+          gender?: string
+          id?: string
+          medical_record_id?: string | null
+          patient_id?: string
+          patient_name?: string
+          person_type?: string
+          position?: string | null
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clearance_records_medical_record_id_fkey"
+            columns: ["medical_record_id"]
+            isOneToOne: false
+            referencedRelation: "medical_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_schedules: {
         Row: {
           created_at: string
@@ -136,42 +213,60 @@ export type Database = {
       }
       medical_records: {
         Row: {
+          age: number | null
           created_at: string | null
           date: string | null
           diagnosis: string | null
           doctor_notes: string | null
+          faculty: string | null
+          full_name: string | null
+          gender: string | null
           id: string
           notes: string | null
           patient_id: string | null
           patient_name: string | null
+          person_type: string | null
+          position: string | null
           recommended_actions: string[] | null
           severity: number | null
           status: string
           updated_at: string | null
         }
         Insert: {
+          age?: number | null
           created_at?: string | null
           date?: string | null
           diagnosis?: string | null
           doctor_notes?: string | null
+          faculty?: string | null
+          full_name?: string | null
+          gender?: string | null
           id?: string
           notes?: string | null
           patient_id?: string | null
           patient_name?: string | null
+          person_type?: string | null
+          position?: string | null
           recommended_actions?: string[] | null
           severity?: number | null
           status?: string
           updated_at?: string | null
         }
         Update: {
+          age?: number | null
           created_at?: string | null
           date?: string | null
           diagnosis?: string | null
           doctor_notes?: string | null
+          faculty?: string | null
+          full_name?: string | null
+          gender?: string | null
           id?: string
           notes?: string | null
           patient_id?: string | null
           patient_name?: string | null
+          person_type?: string | null
+          position?: string | null
           recommended_actions?: string[] | null
           severity?: number | null
           status?: string
@@ -454,6 +549,18 @@ export type Database = {
             | null
           diagnosis: string | null
           month: string | null
+        }
+        Relationships: []
+      }
+      clearance_analytics_by_department: {
+        Row: {
+          clearance_count: number | null
+          clearance_status: string | null
+          college_department:
+            | Database["public"]["Enums"]["college_department"]
+            | null
+          month: string | null
+          person_type: string | null
         }
         Relationships: []
       }

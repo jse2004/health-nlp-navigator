@@ -1054,6 +1054,43 @@ export const downloadEnhancedRecordsCSV = async () => {
 
     XLSX.utils.book_append_sheet(wb, deptWs, "Summary Report");
 
+    // Add clearance records export
+    try {
+      const { data: clearanceData } = await supabase
+        .from('clearance_records')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (clearanceData && clearanceData.length > 0) {
+        const clearanceHeaders = [
+          'ID', 'Medical Record ID', 'Full Name', 'Person Type', 'Age', 'Gender',
+          'Position', 'Department/Faculty', 'Status', 'Reason', 'Approved By',
+          'Created At', 'Valid Until'
+        ];
+
+        const clearanceRows = clearanceData.map((record: any) => [
+          record.id,
+          record.medical_record_id,
+          record.full_name,
+          record.person_type,
+          record.age,
+          record.gender,
+          record.position || '',
+          record.college_department || record.faculty || '',
+          record.clearance_status,
+          record.clearance_reason || '',
+          record.approved_by || '',
+          record.created_at ? new Date(record.created_at).toLocaleDateString() : '',
+          record.valid_until ? new Date(record.valid_until).toLocaleDateString() : ''
+        ]);
+
+        const clearanceWs = XLSX.utils.aoa_to_sheet([clearanceHeaders, ...clearanceRows]);
+        XLSX.utils.book_append_sheet(wb, clearanceWs, 'Clearance Records');
+      }
+    } catch (error) {
+      console.error('Error fetching clearance data:', error);
+    }
+
     // Generate and download the Excel file
     const fileName = `UDM-MEDICAL-RECORD${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
