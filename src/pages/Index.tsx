@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { BarChart3, Users, TrendingUp, Activity, Building, Shield } from 'lucide-react';
+import { BarChart3, Users, Activity, Building, Shield } from 'lucide-react';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import PatientsList from '@/components/PatientsList';
-import PredictiveAnalytics from '@/components/PredictiveAnalytics';
 import ResourceUtilization from '@/components/ResourceUtilization';
 import DepartmentHealthStats from '@/components/DepartmentHealthStats';
 import ClearanceManagement from '@/components/ClearanceManagement';
