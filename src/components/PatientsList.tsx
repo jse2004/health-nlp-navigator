@@ -60,10 +60,6 @@ const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, 
     <div className="bg-card text-card-foreground p-6 rounded-lg shadow-sm border">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Patients</h2>
-        <Button variant="outline" size="sm" className="flex items-center gap-1">
-          <UserPlus className="h-4 w-4" />
-          <span>New Patient</span>
-        </Button>
       </div>
       
       {patients.length > 0 ? (
