@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { BarChart3, Users, Activity, Shield } from 'lucide-react';
+import { BarChart3, Users, Shield } from 'lucide-react';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import PatientsList from '@/components/PatientsList';
-import ResourceUtilization from '@/components/ResourceUtilization';
 import ClearanceManagement from '@/components/ClearanceManagement';
 
 const Index = () => {
@@ -15,8 +14,6 @@ const Index = () => {
         return <Dashboard />;
       case 'patients':
         return <PatientsList patients={[]} />;  // Pass empty array for now
-      case 'resources':
-        return <ResourceUtilization />;
       case 'clearance':
         return <ClearanceManagement />;
       default:
@@ -72,18 +69,6 @@ const Index = () => {
               >
                 <Shield className="h-5 w-5" />
                 <span>Clearance Records</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveSection('resources')}
-                className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-xl transition-all ${
-                  activeSection === 'resources'
-                    ? 'bg-medical-primary text-white shadow-lg'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                <Activity className="h-5 w-5" />
-                <span>Resources</span>
               </button>
             </nav>
           </div>
