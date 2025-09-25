@@ -17,8 +17,6 @@ const Index = () => {
         return <Dashboard />;
       case 'patients':
         return <PatientsList patients={[]} />;  // Pass empty array for now
-      case 'analytics':
-        return <PredictiveAnalytics />;
       case 'resources':
         return <ResourceUtilization />;
       case 'departments':
@@ -66,18 +64,6 @@ const Index = () => {
               >
                 <Users className="h-5 w-5" />
                 <span>Patients</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveSection('analytics')}
-                className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-xl transition-all ${
-                  activeSection === 'analytics'
-                    ? 'bg-medical-primary text-white shadow-lg'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                <TrendingUp className="h-5 w-5" />
-                <span>Severe Cases</span>
               </button>
               
               <button
