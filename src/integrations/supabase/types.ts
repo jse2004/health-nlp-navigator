@@ -481,6 +481,7 @@ export type Database = {
           medical_history: string[] | null
           name: string
           status: string | null
+          student_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -496,6 +497,7 @@ export type Database = {
           medical_history?: string[] | null
           name: string
           status?: string | null
+          student_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -511,9 +513,48 @@ export type Database = {
           medical_history?: string[] | null
           name?: string
           status?: string | null
+          student_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
+      }
+      student_sessions: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          last_accessed: string | null
+          patient_id: string
+          session_token: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          last_accessed?: string | null
+          patient_id: string
+          session_token: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          last_accessed?: string | null
+          patient_id?: string
+          session_token?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -580,6 +621,20 @@ export type Database = {
       }
     }
     Functions: {
+      create_student_session: {
+        Args: { _patient_id: string; _student_id: string }
+        Returns: string
+      }
+      get_student_by_session: {
+        Args: { _session_token: string }
+        Returns: {
+          age: number
+          gender: string
+          patient_id: string
+          patient_name: string
+          student_id: string
+        }[]
+      }
       get_user_role: {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["staff_role"]
@@ -595,10 +650,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_student_credentials: {
+        Args: { _student_id: string; _verification_name: string }
+        Returns: {
+          patient_id: string
+          student_name: string
+        }[]
+      }
     }
     Enums: {
       college_department: "CED" | "CCS" | "CCJ" | "CHS" | "CAS" | "CBA"
       staff_role: "admin" | "doctor" | "nurse" | "receptionist" | "technician"
+      student_role: "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -728,6 +791,7 @@ export const Constants = {
     Enums: {
       college_department: ["CED", "CCS", "CCJ", "CHS", "CAS", "CBA"],
       staff_role: ["admin", "doctor", "nurse", "receptionist", "technician"],
+      student_role: ["student"],
     },
   },
 } as const
