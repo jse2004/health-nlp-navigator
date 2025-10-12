@@ -120,24 +120,32 @@ const ClearanceManagement: React.FC = () => {
     }
 
     try {
-      const clearanceData = {
+      const clearanceData: any = {
         medical_record_id: null,
-        patient_id: `CLR-${Date.now()}`, // Generate a unique patient ID
+        patient_id: `CLR-${Date.now()}`,
         patient_name: newClearance.full_name,
         person_type: newClearance.person_type,
         full_name: newClearance.full_name,
         age: parseInt(newClearance.age),
         gender: newClearance.gender,
-        position: newClearance.position || null,
-        college_department: newClearance.college_department as CollegeDepartment || null,
-        faculty: newClearance.faculty || null,
-        student_id: newClearance.student_id || null,
         clearance_status: 'pending',
-        clearance_reason: 'Pending medical examination',
-        approved_by: null,
-        approved_at: null,
-        valid_until: null
+        clearance_reason: 'Pending medical examination'
       };
+
+      // Add conditional fields based on person type
+      if (newClearance.person_type === 'professor' || newClearance.person_type === 'employee') {
+        if (newClearance.position) clearanceData.position = newClearance.position;
+      }
+
+      if (newClearance.person_type === 'professor' || newClearance.person_type === 'student') {
+        if (newClearance.college_department) {
+          clearanceData.college_department = newClearance.college_department as CollegeDepartment;
+        }
+      }
+
+      if (newClearance.person_type === 'employee' && newClearance.faculty) {
+        clearanceData.faculty = newClearance.faculty;
+      }
 
       const { error } = await supabase
         .from('clearance_records')
@@ -148,7 +156,7 @@ const ClearanceManagement: React.FC = () => {
       toast.success('Clearance record created successfully');
       setIsCreateOpen(false);
       setNewClearance({
-        person_type: 'professor',
+        person_type: 'student',
         full_name: '',
         age: '',
         gender: '',
