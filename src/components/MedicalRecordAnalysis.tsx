@@ -264,6 +264,7 @@ ${(editedRecord.recommended_actions || []).map((action, i) => `${i + 1}. ${actio
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="student">Student</SelectItem>
                         <SelectItem value="professor">Professor</SelectItem>
                         <SelectItem value="employee">Employee</SelectItem>
                         <SelectItem value="guest">Guest</SelectItem>

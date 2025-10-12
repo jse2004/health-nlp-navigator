@@ -391,9 +391,11 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord> & { patie
         const existingRecordId = existingActiveRecords[0].id;
         console.log('Found existing active record for patient, updating instead of creating new:', existingRecordId);
         
+        // Filter out fields not present in medical_records (e.g., college_department)
+        const { college_department: _omitCollegeDept1, ...recordDataClean1 } = recordData as any;
         // Update the existing record
         const dataToUpdate = {
-          ...recordData,
+          ...recordDataClean1,
           patient_id: patientId,
           status: 'active',
           updated_at: new Date().toISOString()
@@ -433,8 +435,9 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord> & { patie
     }
 
     // Prepare data for save
+    const { college_department: _omitCollegeDept, ...recordDataClean } = recordData as any;
     const dataToSave = {
-      ...recordData,
+      ...recordDataClean,
       id: recordId,
       patient_id: patientId,
       status: 'active', // Ensure new/updated records are active
