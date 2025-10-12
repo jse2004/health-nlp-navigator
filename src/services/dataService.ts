@@ -179,10 +179,48 @@ const findOrCreatePatientWithData = async (patientData: PatientDataForRecord): P
   if (!patientData.name) return null;
 
   try {
-    // First, try to find existing patient by name
+    // For students, try to find by student_id first if provided
+    if (patientData.person_type === 'student' && patientData.student_id) {
+      const { data: existingByStudentId, error: studentIdError } = await supabase
+        .from('patients')
+        .select('id, college_department')
+        .eq('student_id', patientData.student_id)
+        .limit(1);
+      
+      if (!studentIdError && existingByStudentId && existingByStudentId.length > 0) {
+        const existingPatient = existingByStudentId[0];
+        
+        // Update patient with new information if provided and different
+        const updateData: any = {
+          last_visit: new Date().toISOString().split('T')[0],
+          updated_at: new Date().toISOString()
+        };
+        
+        if (patientData.college_department && existingPatient.college_department !== patientData.college_department) {
+          updateData.college_department = patientData.college_department;
+        }
+        
+        if (patientData.age) updateData.age = patientData.age;
+        if (patientData.gender) updateData.gender = patientData.gender;
+        if (patientData.name) updateData.name = patientData.name;
+        
+        const { error: updateError } = await supabase
+          .from('patients')
+          .update(updateData)
+          .eq('id', existingPatient.id);
+        
+        if (updateError) {
+          console.error('Error updating existing patient:', updateError);
+        }
+        
+        return existingPatient.id;
+      }
+    }
+    
+    // Try to find existing patient by name
     const { data: existingPatients, error: fetchError } = await supabase
       .from('patients')
-      .select('id, college_department')
+      .select('id, college_department, student_id')
       .eq('name', patientData.name)
       .limit(1);
     
@@ -191,26 +229,36 @@ const findOrCreatePatientWithData = async (patientData: PatientDataForRecord): P
       return null;
     }
 
-    // If patient exists, update them with any new information (especially college department)
+    // If patient exists, update them with any new information
     if (existingPatients && existingPatients.length > 0) {
       const existingPatient = existingPatients[0];
       
-      // Update patient with new college department if provided and different
+      // Update patient with any new information if provided and different
+      const updateData: any = {
+        last_visit: new Date().toISOString().split('T')[0],
+        updated_at: new Date().toISOString()
+      };
+      
       if (patientData.college_department && existingPatient.college_department !== patientData.college_department) {
-        const { error: updateError } = await supabase
-          .from('patients')
-          .update({ 
-            college_department: patientData.college_department,
-            last_visit: new Date().toISOString().split('T')[0],
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingPatient.id);
-        
-        if (updateError) {
-          console.error('Error updating existing patient college department:', updateError);
-        } else {
-          console.log('Updated existing patient with college department:', patientData.college_department);
-        }
+        updateData.college_department = patientData.college_department;
+      }
+      
+      if (patientData.student_id && !existingPatient.student_id) {
+        updateData.student_id = patientData.student_id;
+      }
+      
+      if (patientData.age) updateData.age = patientData.age;
+      if (patientData.gender) updateData.gender = patientData.gender;
+      
+      const { error: updateError } = await supabase
+        .from('patients')
+        .update(updateData)
+        .eq('id', existingPatient.id);
+      
+      if (updateError) {
+        console.error('Error updating existing patient:', updateError);
+      } else {
+        console.log('Updated existing patient with new information');
       }
       
       return existingPatient.id;
@@ -218,17 +266,22 @@ const findOrCreatePatientWithData = async (patientData: PatientDataForRecord): P
 
     // If patient doesn't exist, create a new one with complete data
     const patientId = await generatePatientId();
-    const newPatient = {
+    const newPatient: any = {
       id: patientId,
       name: patientData.name,
-      age: patientData.age || 20, // Default age for student
-      gender: patientData.gender || 'Other', // Default gender
-      condition: 'Student Health Check',
+      age: patientData.age || 20,
+      gender: patientData.gender || 'Other',
+      condition: patientData.person_type === 'student' ? 'Student Health Check' : 'General Check-up',
       status: 'Active',
-      last_visit: new Date().toISOString().split('T')[0], // Today's date
+      last_visit: new Date().toISOString().split('T')[0],
       medical_history: [],
       college_department: patientData.college_department || null
     };
+    
+    // Add student_id if person_type is student
+    if (patientData.person_type === 'student' && patientData.student_id) {
+      newPatient.student_id = patientData.student_id;
+    }
 
     const { data: createdPatient, error: createError } = await supabase
       .from('patients')

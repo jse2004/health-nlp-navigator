@@ -159,10 +159,10 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
         faculty: data.faculty || null,
         patient_data: {
           name: data.name,
-          person_type: data.personType,
+          person_type: data.personType as 'student' | 'professor' | 'employee' | 'guest',
           student_id: data.studentId || undefined,
           course_year: data.courseYear || undefined,
-          college_department: data.collegeDepartment || undefined,
+          college_department: (data.collegeDepartment as any) || undefined,
           position: data.position || undefined,
           faculty: data.faculty || undefined,
           age: parseInt(data.age) || 0,
