@@ -348,6 +348,29 @@ export const saveMedicalRecord = async (record: Partial<MedicalRecord> & { patie
       patientId = await findOrCreatePatient(recordData.patient_name);
     }
 
+    // Ensure current staff user is assigned to this patient to satisfy RLS on medical_records
+    if (patientId) {
+      const { data: userRes } = await supabase.auth.getUser();
+      const userId = userRes?.user?.id;
+      if (userId) {
+        const { data: existingAssign, error: assignFetchError } = await supabase
+          .from('patient_assignments')
+          .select('id')
+          .eq('patient_id', patientId)
+          .eq('staff_user_id', userId)
+          .limit(1);
+        
+        if (!assignFetchError && (!existingAssign || existingAssign.length === 0)) {
+          const { error: assignInsertError } = await supabase
+            .from('patient_assignments')
+            .insert([{ patient_id: patientId, staff_user_id: userId, assigned_by: userId }]);
+          if (assignInsertError) {
+            console.warn('Could not create patient assignment (may lack doctor/admin role):', assignInsertError);
+          }
+        }
+      }
+    }
+
     // For new records, check if the same patient already has an active record
     if (patientId && !id) { // Only for new records
       // First, check if there's already an active record for this patient
