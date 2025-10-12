@@ -6,6 +6,7 @@ import PatientsList from '@/components/PatientsList';
 import SearchBar from '@/components/SearchBar';
 import { fetchPatients } from '@/services/dataService';
 import { Patient } from '@/data/sampleData';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
@@ -18,6 +19,32 @@ const Index = () => {
     if (activeSection === 'patients') {
       loadPatients();
     }
+  }, [activeSection, searchQuery]);
+
+  // Set up real-time subscription for patient updates
+  useEffect(() => {
+    if (activeSection !== 'patients') return;
+
+    const channel = supabase
+      .channel('patients-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patients'
+        },
+        (payload) => {
+          console.log('Patient data changed:', payload);
+          // Reload patients to get fresh data
+          loadPatients();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [activeSection, searchQuery]);
 
   const loadPatients = async () => {
