@@ -19,13 +19,14 @@ interface ClearanceRecord {
   medical_record_id: string;
   patient_id: string;
   patient_name: string;
-  person_type: 'professor' | 'employee' | 'guest';
+  person_type: 'professor' | 'employee' | 'guest' | 'student';
   full_name: string;
   age: number;
   gender: string;
   position?: string;
   college_department?: CollegeDepartment;
   faculty?: string;
+  student_id?: string;
   clearance_status: 'pending' | 'approved' | 'denied';
   clearance_reason?: string;
   approved_by?: string;
@@ -57,14 +58,14 @@ const ClearanceManagement: React.FC = () => {
 
   // New clearance form state
   const [newClearance, setNewClearance] = useState({
-    medical_record_id: '',
     person_type: 'professor',
     full_name: '',
     age: '',
     gender: '',
     position: '',
     college_department: '',
-    faculty: ''
+    faculty: '',
+    student_id: ''
   });
 
   // Update clearance form state
@@ -113,26 +114,16 @@ const ClearanceManagement: React.FC = () => {
   };
 
   const createClearanceRecord = async () => {
-    if (!newClearance.medical_record_id || !newClearance.full_name || !newClearance.age || !newClearance.gender) {
+    if (!newClearance.full_name || !newClearance.age || !newClearance.gender) {
       toast.error('Please fill all required fields');
       return;
     }
 
     try {
-      const selectedMedicalRecord = medicalRecords.find(r => r.id === newClearance.medical_record_id);
-      if (!selectedMedicalRecord) {
-        toast.error('Selected medical record not found');
-        return;
-      }
-
-      // Determine clearance status based on severity
-      const clearanceStatus = selectedMedicalRecord.severity >= 7 ? 'denied' : 
-                             selectedMedicalRecord.severity >= 4 ? 'pending' : 'approved';
-      
       const clearanceData = {
-        medical_record_id: newClearance.medical_record_id,
-        patient_id: selectedMedicalRecord.id, // Using medical record id as patient reference
-        patient_name: selectedMedicalRecord.patient_name,
+        medical_record_id: null,
+        patient_id: `CLR-${Date.now()}`, // Generate a unique patient ID
+        patient_name: newClearance.full_name,
         person_type: newClearance.person_type,
         full_name: newClearance.full_name,
         age: parseInt(newClearance.age),
@@ -140,14 +131,12 @@ const ClearanceManagement: React.FC = () => {
         position: newClearance.position || null,
         college_department: newClearance.college_department as CollegeDepartment || null,
         faculty: newClearance.faculty || null,
-        clearance_status: clearanceStatus,
-        clearance_reason: clearanceStatus === 'denied' ? 'High severity medical condition' :
-                         clearanceStatus === 'pending' ? 'Moderate severity - requires review' :
-                         'Low severity - cleared for activities',
-        approved_by: clearanceStatus === 'approved' ? user?.id : null,
-        approved_at: clearanceStatus === 'approved' ? new Date().toISOString() : null,
-        valid_until: clearanceStatus === 'approved' ? 
-          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null
+        student_id: newClearance.student_id || null,
+        clearance_status: 'pending',
+        clearance_reason: 'Pending medical examination',
+        approved_by: null,
+        approved_at: null,
+        valid_until: null
       };
 
       const { error } = await supabase
@@ -159,14 +148,14 @@ const ClearanceManagement: React.FC = () => {
       toast.success('Clearance record created successfully');
       setIsCreateOpen(false);
       setNewClearance({
-        medical_record_id: '',
         person_type: 'professor',
         full_name: '',
         age: '',
         gender: '',
         position: '',
         college_department: '',
-        faculty: ''
+        faculty: '',
+        student_id: ''
       });
       fetchClearanceRecords();
     } catch (error) {
@@ -311,25 +300,6 @@ const ClearanceManagement: React.FC = () => {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="medical_record">Medical Record</Label>
-                  <Select
-                    value={newClearance.medical_record_id}
-                    onValueChange={(value) => setNewClearance(prev => ({ ...prev, medical_record_id: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select medical record" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {medicalRecords.map(record => (
-                        <SelectItem key={record.id} value={record.id}>
-                          {record.patient_name} - {record.diagnosis} (Severity: {record.severity})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <Label htmlFor="person_type">Person Type</Label>
                   <Select
                     value={newClearance.person_type}
@@ -339,6 +309,7 @@ const ClearanceManagement: React.FC = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="student">Student</SelectItem>
                       <SelectItem value="professor">Professor</SelectItem>
                       <SelectItem value="employee">Employee</SelectItem>
                       <SelectItem value="guest">Guest</SelectItem>
@@ -429,6 +400,39 @@ const ClearanceManagement: React.FC = () => {
                       placeholder="Enter faculty"
                     />
                   </div>
+                )}
+
+                {newClearance.person_type === 'student' && (
+                  <>
+                    <div>
+                      <Label htmlFor="student_id">Student ID</Label>
+                      <Input
+                        id="student_id"
+                        value={newClearance.student_id}
+                        onChange={(e) => setNewClearance(prev => ({ ...prev, student_id: e.target.value }))}
+                        placeholder="Enter student ID"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="student_department">College Department</Label>
+                      <Select
+                        value={newClearance.college_department}
+                        onValueChange={(value) => setNewClearance(prev => ({ ...prev, college_department: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CED">College of Education</SelectItem>
+                          <SelectItem value="CCS">College of Computing Science</SelectItem>
+                          <SelectItem value="CCJ">College of Criminal Justice</SelectItem>
+                          <SelectItem value="CHS">College of Health Science</SelectItem>
+                          <SelectItem value="CAS">College of Arts and Science</SelectItem>
+                          <SelectItem value="CBA">College of Business Administration</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
                 )}
 
                 <div className="flex justify-end gap-2">
