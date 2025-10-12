@@ -17,6 +17,7 @@ import { Clipboard, FileText, BarChart, Award, Stethoscope, Download, Save, File
 import { toast } from 'sonner';
 import { saveMedicalRecord, createMedicalCertificate, fetchMedicalCertificatesByRecord, type MedicalCertificate } from '@/services/dataService';
 import MedicalCertificateComponent from './MedicalCertificate';
+import { Document, Packer, Paragraph, Table, TableCell, TableRow, WidthType, AlignmentType, TextRun, BorderStyle } from 'docx';
 
 interface MedicalRecordAnalysisProps {
   record?: MedicalRecord;
@@ -134,39 +135,295 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
   
   const severityInfo = getSeverityLabel(editedRecord.severity || 0);
 
-  // Download record as PDF
-  const downloadRecord = () => {
-    // Create content for the PDF
-    const content = `
-Medical Record
---------------
-Record ID: ${editedRecord.id}
-Date: ${editedRecord.date}
-Patient: ${editedRecord.patient_name}
+  // Download record as Word document
+  const downloadRecord = async () => {
+    try {
+      const formattedDate = editedRecord.date 
+        ? new Date(editedRecord.date).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })
+        : 'N/A';
 
-Diagnosis: ${editedRecord.diagnosis}
+      const recommendedActionsText = (editedRecord.recommended_actions || [])
+        .map((action, i) => `${i + 1}. ${action}`)
+        .join('\n');
 
-Doctor's Notes:
-${editedRecord.doctor_notes || editedRecord.notes}
+      // Create Word document with table
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: "Personal Health Record",
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 400 }
+            }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [
+                // Header row
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Medical Record", bold: true, size: 28 })
+                          ]
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Divider row
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({ text: "--------------" })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Record ID
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Record ID: ", bold: true }),
+                            new TextRun({ text: editedRecord.id || 'N/A' })
+                          ]
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Date
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Date: ", bold: true }),
+                            new TextRun({ text: formattedDate })
+                          ]
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Patient
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Patient: ", bold: true }),
+                            new TextRun({ text: `"${editedRecord.patient_name || 'Unknown'}"` })
+                          ]
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Empty row
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [new Paragraph({ text: "" })],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Diagnosis
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Diagnosis: ", bold: true }),
+                            new TextRun({ text: editedRecord.diagnosis || 'N/A' })
+                          ]
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Empty row
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [new Paragraph({ text: "" })],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Doctor's Notes
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: "Doctor's Notes:", bold: true })]
+                        }),
+                        new Paragraph({
+                          text: editedRecord.doctor_notes || editedRecord.notes || 'N/A'
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Empty row
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [new Paragraph({ text: "" })],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Severity
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "Severity: ", bold: true }),
+                            new TextRun({ text: `${editedRecord.severity || 0}/10` })
+                          ]
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Empty row
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [new Paragraph({ text: "" })],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                }),
+                // Recommended Actions
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: "Recommended Actions:", bold: true })]
+                        }),
+                        new Paragraph({
+                          text: recommendedActionsText || 'None'
+                        })
+                      ],
+                      borders: {
+                        top: { style: BorderStyle.SINGLE, size: 1 },
+                        bottom: { style: BorderStyle.SINGLE, size: 1 },
+                        left: { style: BorderStyle.SINGLE, size: 1 },
+                        right: { style: BorderStyle.SINGLE, size: 1 }
+                      }
+                    })
+                  ]
+                })
+              ]
+            })
+          ]
+        }]
+      });
 
-Severity: ${editedRecord.severity}/10
-
-Recommended Actions:
-${(editedRecord.recommended_actions || []).map((action, i) => `${i + 1}. ${action}`).join('\n')}
-    `;
-    
-    // Create a blob and download it
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `medical-record-${editedRecord.id}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success('Record downloaded successfully');
+      // Generate and download the document
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `medical-record-${editedRecord.id}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Medical record downloaded as Word document');
+    } catch (error) {
+      console.error('Error generating Word document:', error);
+      toast.error('Failed to generate Word document');
+    }
   };
 
   // Create medical certificate
