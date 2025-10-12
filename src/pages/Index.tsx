@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Users, Shield } from 'lucide-react';
+import { BarChart3, Users } from 'lucide-react';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import PatientsList from '@/components/PatientsList';
-import ClearanceManagement from '@/components/ClearanceManagement';
 import SearchBar from '@/components/SearchBar';
 import { fetchPatients } from '@/services/dataService';
 import { Patient } from '@/data/sampleData';
@@ -58,8 +57,6 @@ const Index = () => {
             />
           </div>
         );
-      case 'clearance':
-        return <ClearanceManagement />;
       default:
         return <Dashboard />;
     }
@@ -101,18 +98,6 @@ const Index = () => {
               >
                 <Users className="h-5 w-5" />
                 <span>Patients</span>
-              </button>
-              
-              <button
-                onClick={() => setActiveSection('clearance')}
-                className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-xl transition-all ${
-                  activeSection === 'clearance'
-                    ? 'bg-medical-primary text-white shadow-lg'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                <Shield className="h-5 w-5" />
-                <span>Clearance Records</span>
               </button>
             </nav>
           </div>
