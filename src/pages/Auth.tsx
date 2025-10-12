@@ -81,7 +81,7 @@ const Auth = () => {
         
         <div className="relative z-10 text-center text-white max-w-md">
           <div className="w-24 h-24 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-8 shadow-2xl">
-            <<link rel="icon" type="image/png" href="/udm-logo.png" className="w-12 h-12 text-white" />
+            <<link rel="icon" type="image/png" href="/udm_clinic.png" className="w-12 h-12 text-white" />
           </div>
           
           <h1 className="text-5xl font-bold mb-6 tracking-tight">UDM CARE</h1>
