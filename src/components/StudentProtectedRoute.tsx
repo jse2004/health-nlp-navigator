@@ -8,8 +8,11 @@ interface StudentProtectedRouteProps {
 
 const StudentProtectedRoute: React.FC<StudentProtectedRouteProps> = ({ children }) => {
   const { student, loading } = useStudentAuth();
+  const hasToken = typeof window !== 'undefined' && !!localStorage.getItem('student_session_token');
 
-  if (loading) {
+  // Show loader while either provider is loading OR we have a token but context
+  // hasn't populated yet (prevents redirect bounce immediately after login)
+  if (loading || (hasToken && !student)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

@@ -639,6 +639,14 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: Database["public"]["Enums"]["staff_role"]
       }
+      normalize_id: {
+        Args: { _t: string }
+        Returns: string
+      }
+      normalize_text: {
+        Args: { _t: string }
+        Returns: string
+      }
       user_can_access_patient: {
         Args: { patient_uuid: string; user_uuid: string }
         Returns: boolean
