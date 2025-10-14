@@ -178,6 +178,12 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                   </div>
                   {patientInfo && (
                     <>
+                      {patientInfo.student_id && (
+                        <div>
+                          <p className="text-sm text-gray-500">Student ID</p>
+                          <p className="font-mono text-sm bg-blue-50 px-2 py-1 rounded">{patientInfo.student_id}</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-gray-500">Age</p>
                         <p className="font-semibold">{patientInfo.age} years old</p>

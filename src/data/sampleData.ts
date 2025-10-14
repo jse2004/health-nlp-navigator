@@ -20,6 +20,7 @@ export interface Patient {
   last_visit: string; // Using snake_case for DB compatibility
   medical_history: string[]; // Using snake_case for DB compatibility
   college_department?: CollegeDepartment;
+  student_id?: string; // Student ID for student patients
 }
 
 export interface MedicalRecord {
