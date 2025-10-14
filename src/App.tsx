@@ -10,6 +10,7 @@ import { StudentAuthProvider } from "@/contexts/StudentAuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import StudentProtectedRoute from "@/components/StudentProtectedRoute";
+import HomePage from "./pages/HomePage";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import StudentLogin from "./pages/StudentLogin";
@@ -30,8 +31,14 @@ const App = () => {
             <StudentAuthProvider>
               <BrowserRouter>
                 <Routes>
+                  {/* Public Homepage */}
+                  <Route path="/" element={<HomePage />} />
+                  
+                  {/* Admin Auth */}
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/" element={
+                  
+                  {/* Admin Dashboard */}
+                  <Route path="/dashboard" element={
                     <ProtectedRoute>
                       <Index />
                     </ProtectedRoute>
