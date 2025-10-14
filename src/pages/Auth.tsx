@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Activity, Heart, Users, TrendingUp } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, Activity, Heart, Users, TrendingUp, ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Auth = () => {
@@ -65,6 +65,18 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors">
+      {/* Back to Homepage button */}
+      <div className="absolute top-6 left-6 z-20">
+        <Button
+          variant="outline"
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Home
+        </Button>
+      </div>
+
       {/* Theme toggle */}
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
