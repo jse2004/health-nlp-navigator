@@ -53,10 +53,14 @@ export const StudentAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const login = async (studentId: string, verificationName: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Normalize inputs
+      const _studentId = studentId.trim();
+      const _verificationName = verificationName.trim();
+
       // Validate credentials
       const { data: validationData, error: validationError } = await supabase.rpc('validate_student_credentials', {
-        _student_id: studentId,
-        _verification_name: verificationName
+        _student_id: _studentId,
+        _verification_name: _verificationName
       });
 
       if (validationError || !validationData || validationData.length === 0) {

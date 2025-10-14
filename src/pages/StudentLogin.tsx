@@ -7,6 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { GraduationCap, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  studentId: z.string().trim().min(5, { message: 'Invalid Student ID' }).max(50),
+  verificationName: z.string().trim().min(2, { message: 'Name is required' }).max(100),
+});
 
 const StudentLogin = () => {
   const [studentId, setStudentId] = useState('');
@@ -24,16 +30,22 @@ const StudentLogin = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    const result = await login(studentId, verificationName);
-    
+    const parsed = loginSchema.safeParse({ studentId, verificationName });
+    if (!parsed.success) {
+      const firstError = parsed.error.errors[0]?.message || 'Please check your inputs';
+      toast.error(firstError);
+      setIsLoading(false);
+      return;
+    }
+    const sid = parsed.data.studentId.trim();
+    const name = parsed.data.verificationName.trim();
+    const result = await login(sid, name);
     if (result.success) {
       toast.success('Login successful!');
       navigate('/student/dashboard');
     } else {
       toast.error(result.error || 'Login failed. Please try again.');
     }
-    
     setIsLoading(false);
   };
 
