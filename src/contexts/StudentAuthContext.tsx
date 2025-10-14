@@ -39,10 +39,16 @@ export const StudentAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
           _session_token: sessionToken
         });
 
-        if (data && data.length > 0) {
-          setStudent(data[0]);
-        } else {
+        if (error) {
+          console.error('Session fetch error:', error);
           localStorage.removeItem('student_session_token');
+        } else {
+          const row = Array.isArray(data) ? data[0] : data;
+          if (row && row.patient_id) {
+            setStudent(row as StudentData);
+          } else {
+            localStorage.removeItem('student_session_token');
+          }
         }
       }
       setLoading(false);
@@ -55,7 +61,7 @@ export const StudentAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
     try {
       // Normalize inputs
       const _studentId = studentId.trim();
-      const _verificationName = verificationName.trim();
+      const _verificationName = verificationName.trim().replace(/\s+/g, ' ');
 
       // Validate credentials
       const { data: validationData, error: validationError } = await supabase.rpc('validate_student_credentials', {
@@ -63,32 +69,43 @@ export const StudentAuthProvider: React.FC<{ children: React.ReactNode }> = ({ c
         _verification_name: _verificationName
       });
 
-      if (validationError || !validationData || validationData.length === 0) {
-        return { success: false, error: 'Invalid Student ID or Name. Please check your credentials.' };
+      if (validationError) {
+        console.error('Validation error:', validationError);
+        return { success: false, error: 'Unable to verify credentials. Please try again.' };
       }
 
-      const patientData = validationData[0];
+      const patientData: any = Array.isArray(validationData) ? validationData[0] : validationData;
+      if (!patientData || !patientData.patient_id) {
+        return { success: false, error: 'Invalid Student ID or Name. Please check your credentials.' };
+      }
 
       // Create session
       const { data: sessionToken, error: sessionError } = await supabase.rpc('create_student_session', {
         _patient_id: patientData.patient_id,
-        _student_id: studentId
+        _student_id: _studentId
       });
 
       if (sessionError || !sessionToken) {
+        console.error('Session creation error:', sessionError);
         return { success: false, error: 'Failed to create session. Please try again.' };
       }
 
       // Store session token
-      localStorage.setItem('student_session_token', sessionToken);
+      localStorage.setItem('student_session_token', String(sessionToken));
 
       // Fetch student data
-      const { data: studentData } = await supabase.rpc('get_student_by_session', {
-        _session_token: sessionToken
+      const { data: studentData, error: fetchError } = await supabase.rpc('get_student_by_session', {
+        _session_token: String(sessionToken)
       });
 
-      if (studentData && studentData.length > 0) {
-        setStudent(studentData[0]);
+      if (fetchError) {
+        console.error('Fetch student by session error:', fetchError);
+        return { success: false, error: 'Failed to fetch student data.' };
+      }
+
+      const studentRow: any = Array.isArray(studentData) ? studentData[0] : studentData;
+      if (studentRow && studentRow.patient_id) {
+        setStudent(studentRow as StudentData);
         return { success: true };
       }
 
