@@ -21,8 +21,7 @@ import {
   Edit,
   Save,
   X,
-  Download,
-  Printer
+  Download
 } from 'lucide-react';
 import { MedicalRecord, Patient } from '@/data/sampleData';
 import { fetchMedicalRecords, fetchPatients, saveMedicalRecord, savePatient } from '@/services/dataService';
@@ -459,21 +458,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     }
   };
 
-  const handlePrintIndividualRecord = () => {
-    window.print();
-    toast({
-      title: "Print Dialog Opened",
-      description: "Individual medical record ready to print",
-    });
-  };
-
-  const handlePrintCertificate = () => {
-    window.print();
-    toast({
-      title: "Print Dialog Opened",
-      description: "Medical certificate ready to print",
-    });
-  };
 
   if (!record) return null;
 
@@ -496,10 +480,6 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                   <Button variant="outline" size="sm" onClick={generateMedicalCertificatePDF}>
                     <Download className="h-4 w-4 mr-2" />
                     Certificate PDF
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handlePrintIndividualRecord}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print
                   </Button>
                   <Button variant="default" size="sm" onClick={() => setIsEditMode(true)}>
                     <Edit className="h-4 w-4 mr-2" />
