@@ -13,10 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clipboard, FileText, BarChart, Award, Stethoscope, Save, FileCheck } from 'lucide-react';
+import { Clipboard, FileText, BarChart, Award, Stethoscope, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { saveMedicalRecord, createMedicalCertificate, fetchMedicalCertificatesByRecord, type MedicalCertificate } from '@/services/dataService';
-import MedicalCertificateComponent from './MedicalCertificate';
+import { saveMedicalRecord } from '@/services/dataService';
 
 interface MedicalRecordAnalysisProps {
   record?: MedicalRecord;
@@ -36,9 +35,6 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [certificates, setCertificates] = useState<MedicalCertificate[]>([]);
-  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
-  const [selectedCertificate, setSelectedCertificate] = useState<MedicalCertificate | null>(null);
   
   // Initialize edited record when the record changes
   useEffect(() => {
@@ -59,23 +55,8 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
       const doctorNotes = record.doctor_notes || record.notes || '';
       const result = analyzeMedicalText(doctorNotes);
       setAnalysisResult(result);
-      
-      // Load existing certificates
-      loadCertificates();
     }
   }, [record]);
-
-  // Load certificates for this record
-  const loadCertificates = async () => {
-    if (!record?.id) return;
-    
-    try {
-      const certificatesData = await fetchMedicalCertificatesByRecord(record.id);
-      setCertificates(certificatesData);
-    } catch (error) {
-      console.error('Error loading certificates:', error);
-    }
-  };
   
   // If no record is selected, don't render anything
   if (!record) {
@@ -133,41 +114,6 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
   };
   
   const severityInfo = getSeverityLabel(editedRecord.severity || 0);
-
-  // Download record as Word document
-
-  // Create medical certificate
-  const handleCreateCertificate = async () => {
-    if (!editedRecord || !editedRecord.id) {
-      toast.error('Please save the record first');
-      return;
-    }
-
-    try {
-      const certificateData = {
-        medical_record_id: editedRecord.id,
-        patient_name: editedRecord.patient_name || 'Unknown Patient',
-        reason: editedRecord.diagnosis || 'Medical consultation',
-        recommendations: editedRecord.recommended_actions?.join('; '),
-        valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
-        doctor_name: 'Dr. Medical Officer'
-      };
-
-      const certificate = await createMedicalCertificate(certificateData);
-      
-      // Refresh certificates list
-      await loadCertificates();
-      
-      // Show the certificate
-      setSelectedCertificate(certificate);
-      setIsCertificateOpen(true);
-      
-      toast.success('Medical certificate created successfully');
-    } catch (error) {
-      console.error('Error creating certificate:', error);
-      toast.error('Failed to create medical certificate');
-    }
-  };
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -328,16 +274,6 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
           )}
 
           <div className="mb-4 flex justify-end space-x-2">
-            <Button
-              variant="outline" 
-              size="sm"
-              onClick={handleCreateCertificate}
-              className="flex items-center gap-1 text-primary hover:text-primary"
-              disabled={!editedRecord?.id}
-            >
-              <FileCheck className="h-4 w-4" />
-              <span>Medical Certificate</span>
-            </Button>
             {isEditing ? (
               <>
                 <Button 
@@ -523,22 +459,22 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   
                   <div className="mb-4">
                     <h4 className="text-xs uppercase text-gray-500 mb-1">Clinical Sentiment</h4>
-                    <div className="bg-gray-100 rounded-full h-2 w-full mt-2">
+                    <div className="relative bg-gray-100 rounded-full h-2 w-full mt-2">
                       <div 
-                        className={`h-full rounded-full ${
+                        className={`h-full rounded-full transition-all ${
                           analysisResult?.sentiment.score < 0 
                             ? 'bg-medical-critical' 
                             : 'bg-medical-success'
                         }`}
                         style={{ 
                           width: `${Math.abs((analysisResult?.sentiment.score || 0) * 50) + 50}%`,
-                          marginLeft: (analysisResult?.sentiment.score || 0) < 0 ? 'auto' : '0'
+                          marginLeft: (analysisResult?.sentiment.score || 0) < 0 ? '0' : '0'
                         }}
                       />
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                       <span>Concerning</span>
-                      <span>Neutral</span>
+                      <span className="absolute left-1/2 -translate-x-1/2">Neutral</span>
                       <span>Positive</span>
                     </div>
                   </div>
@@ -604,13 +540,10 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                     )
                   )}
                   
-                  <div className="mt-6 flex justify-end space-x-2">
+                  <div className="mt-6 flex justify-end">
                     <Button variant="outline" size="sm" onClick={onClose}>
                       Close
                     </Button>
-                    {!isEditing && (
-                      <Button size="sm" onClick={() => setIsEditing(true)}>Edit</Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -618,18 +551,6 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
           </Tabs>
         </div>
       </SheetContent>
-      
-      {/* Medical Certificate Dialog */}
-      {selectedCertificate && (
-        <MedicalCertificateComponent
-          isOpen={isCertificateOpen}
-          onClose={() => {
-            setIsCertificateOpen(false);
-            setSelectedCertificate(null);
-          }}
-          certificateData={selectedCertificate}
-        />
-      )}
     </Sheet>
   );
 };
