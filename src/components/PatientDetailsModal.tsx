@@ -299,11 +299,39 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     const rightMargin = 25;
     const contentWidth = pageWidth - leftMargin - rightMargin;
     
-    // Header - UNIVERSIDAD DE MANILA
-    let yPos = 40;
-    pdf.setFontSize(18);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('UNIVERSIDAD DE MANILA', pageWidth / 2, yPos, { align: 'center' });
+    // Load logos
+    const loadImage = (url: string): Promise<HTMLImageElement> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+    };
+
+    try {
+      const [leftLogo, rightLogo] = await Promise.all([
+        loadImage('/udm_clinic.png'),
+        loadImage('/udm-logo.png')
+      ]);
+
+      // Header with logos - UNIVERSIDAD DE MANILA
+      let yPos = 30;
+      const logoSize = 20; // Logo size in mm
+      const logoY = yPos - 5;
+      
+      // Add left logo
+      pdf.addImage(leftLogo, 'PNG', leftMargin, logoY, logoSize, logoSize);
+      
+      // Add right logo
+      pdf.addImage(rightLogo, 'PNG', pageWidth - rightMargin - logoSize, logoY, logoSize, logoSize);
+      
+      // Center text
+      yPos = yPos + (logoSize / 2);
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('UNIVERSIDAD DE MANILA', pageWidth / 2, yPos, { align: 'center' });
     
     // Certificate Number
     yPos += lineSpacing * 1.5;
@@ -363,12 +391,20 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     yPos = pageHeight - bottomMargin;
     pdf.text('University Physician: ________________________', leftMargin, yPos);
     
-    pdf.save(`Medical_Certificate_${record?.patient_name}_${new Date().toISOString().split('T')[0]}.pdf`);
-    
-    toast({
-      title: "Certificate Downloaded",
-      description: "Medical certificate has been downloaded",
-    });
+      pdf.save(`Medical_Certificate_${record?.patient_name}_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      toast({
+        title: "Certificate Downloaded",
+        description: "Medical certificate has been downloaded",
+      });
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate certificate. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handlePrintIndividualRecord = () => {
