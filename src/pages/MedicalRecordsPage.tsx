@@ -73,7 +73,7 @@ const MedicalRecordsPage = () => {
             </div>
             <div className="flex items-center gap-3">
               <SearchBar onSearch={setSearchQuery} placeholder="Search records..." />
-              <Badge variant="secondary" className="px-3 py-1.5 font-medium">
+              <Badge variant="secondary" className="px-3 py-1.5 font-medium whitespace-nowrap">
                 {medicalRecords.length} Total
               </Badge>
               <Button variant="outline" size="sm" onClick={downloadAllRecords} className="gap-2">
@@ -157,14 +157,6 @@ const MedicalRecordsPage = () => {
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         View
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-muted-foreground hover:text-foreground hover:bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity" 
-                        onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
-                      >
-                        Edit
                       </Button>
                       <Button 
                         variant="ghost" 
