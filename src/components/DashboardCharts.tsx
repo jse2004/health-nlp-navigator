@@ -214,7 +214,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
           <CardDescription>Consultations in the last 7 days</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={weeklyChartConfig} className="h-[350px]">
+          <ChartContainer config={weeklyChartConfig} className="h-[450px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyVisitsData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
