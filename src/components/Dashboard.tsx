@@ -16,6 +16,7 @@ import { fetchPatients, fetchMedicalRecords, deleteMedicalRecord, getAnalyticsDa
 import AppointmentScheduler from './AppointmentScheduler';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import DashboardCharts from './DashboardCharts';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
@@ -218,6 +219,9 @@ const Dashboard: React.FC = () => {
       </div>
 
       <AnalyticsSummary data={analyticsSummary} />
+
+      {/* Visualization Charts */}
+      <DashboardCharts patients={patients} medicalRecords={medicalRecords} />
 
       {/* Modals */}
       <NewNLPAnalysis 
