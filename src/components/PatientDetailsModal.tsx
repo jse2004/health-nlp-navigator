@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Calendar, 
   Activity, 
@@ -12,11 +17,19 @@ import {
   Clock,
   Thermometer,
   Heart,
-  Eye
+  Eye,
+  Edit,
+  Save,
+  X,
+  Download,
+  Printer
 } from 'lucide-react';
 import { MedicalRecord, Patient } from '@/data/sampleData';
-import { fetchMedicalRecords, fetchPatients } from '@/services/dataService';
+import { fetchMedicalRecords, fetchPatients, saveMedicalRecord, savePatient } from '@/services/dataService';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface PatientDetailsModalProps {
   record: MedicalRecord | null;
@@ -32,12 +45,26 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
   const [patientInfo, setPatientInfo] = useState<Patient | null>(null);
   const [patientHistory, setPatientHistory] = useState<MedicalRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  // Edit form state
+  const [editedRecord, setEditedRecord] = useState<Partial<MedicalRecord>>({});
+  const [editedPatient, setEditedPatient] = useState<Partial<Patient>>({});
 
   useEffect(() => {
     if (record && isOpen) {
       loadPatientDetails();
+      setEditedRecord(record);
     }
   }, [record, isOpen]);
+
+  useEffect(() => {
+    if (patientInfo) {
+      setEditedPatient(patientInfo);
+    }
+  }, [patientInfo]);
 
   // Real-time updates for medical records
   useEffect(() => {
@@ -137,16 +164,267 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     });
   };
 
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      // Save patient info
+      if (patientInfo && editedPatient) {
+        await savePatient({
+          ...patientInfo,
+          ...editedPatient
+        });
+      }
+
+      // Save medical record
+      if (record && editedRecord) {
+        await saveMedicalRecord({
+          ...record,
+          ...editedRecord
+        });
+      }
+
+      toast({
+        title: "Changes saved",
+        description: "Patient details updated successfully",
+      });
+
+      setIsEditMode(false);
+      await loadPatientDetails();
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save changes",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditedRecord(record || {});
+    setEditedPatient(patientInfo || {});
+    setIsEditMode(false);
+  };
+
+  const generateIndividualRecordPDF = async () => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    
+    // Header
+    pdf.setFontSize(20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Medical Record', pageWidth / 2, 20, { align: 'center' });
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Record ID: ${record?.id}`, pageWidth / 2, 28, { align: 'center' });
+    pdf.text(`Date: ${record?.date ? formatDate(record.date) : 'N/A'}`, pageWidth / 2, 34, { align: 'center' });
+    
+    // Patient Information
+    let yPos = 45;
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Patient Information', 15, yPos);
+    
+    yPos += 8;
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Name: ${record?.patient_name || 'N/A'}`, 15, yPos);
+    yPos += 6;
+    pdf.text(`Patient ID: ${record?.patient_id || 'N/A'}`, 15, yPos);
+    yPos += 6;
+    if (patientInfo?.student_id) {
+      pdf.text(`Student ID: ${patientInfo.student_id}`, 15, yPos);
+      yPos += 6;
+    }
+    pdf.text(`Age: ${patientInfo?.age || 'N/A'} | Gender: ${patientInfo?.gender || 'N/A'}`, 15, yPos);
+    
+    // Medical Details
+    yPos += 12;
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Medical Details', 15, yPos);
+    
+    yPos += 8;
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Severity Level: ${getSeverityLabel(record?.severity || 0)} (${record?.severity || 0}/10)`, 15, yPos);
+    
+    yPos += 8;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Diagnosis:', 15, yPos);
+    yPos += 6;
+    pdf.setFont('helvetica', 'normal');
+    const diagnosisLines = pdf.splitTextToSize(record?.diagnosis || 'No diagnosis recorded', pageWidth - 30);
+    pdf.text(diagnosisLines, 15, yPos);
+    yPos += diagnosisLines.length * 6 + 4;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Doctor\'s Notes:', 15, yPos);
+    yPos += 6;
+    pdf.setFont('helvetica', 'normal');
+    const notesLines = pdf.splitTextToSize(record?.doctor_notes || 'No notes recorded', pageWidth - 30);
+    pdf.text(notesLines, 15, yPos);
+    yPos += notesLines.length * 6 + 4;
+    
+    if (record?.recommended_actions && record.recommended_actions.length > 0) {
+      yPos += 4;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Recommended Actions:', 15, yPos);
+      yPos += 6;
+      pdf.setFont('helvetica', 'normal');
+      record.recommended_actions.forEach((action) => {
+        const actionLines = pdf.splitTextToSize(`• ${action}`, pageWidth - 30);
+        pdf.text(actionLines, 15, yPos);
+        yPos += actionLines.length * 6;
+      });
+    }
+    
+    pdf.save(`Medical_Record_${record?.id}.pdf`);
+    
+    toast({
+      title: "PDF Downloaded",
+      description: "Individual medical record has been downloaded",
+    });
+  };
+
+  const generateMedicalCertificatePDF = async () => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // Header
+    pdf.setFontSize(22);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('MEDICAL CERTIFICATE', pageWidth / 2, 25, { align: 'center' });
+    
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`Certificate No: CERT-${record?.id}`, pageWidth / 2, 33, { align: 'center' });
+    pdf.text(`Issue Date: ${new Date().toLocaleDateString()}`, pageWidth / 2, 39, { align: 'center' });
+    
+    // Border
+    pdf.setLineWidth(0.5);
+    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+    
+    // Content
+    let yPos = 55;
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'normal');
+    
+    const certText = `This is to certify that ${record?.patient_name || 'N/A'}, ` +
+                    `${patientInfo?.age ? `aged ${patientInfo.age} years` : ''}, ` +
+                    `was examined on ${record?.date ? new Date(record.date).toLocaleDateString() : 'N/A'}.`;
+    
+    const certLines = pdf.splitTextToSize(certText, pageWidth - 40);
+    pdf.text(certLines, 20, yPos);
+    yPos += certLines.length * 7 + 10;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Diagnosis:', 20, yPos);
+    yPos += 7;
+    pdf.setFont('helvetica', 'normal');
+    const diagLines = pdf.splitTextToSize(record?.diagnosis || 'N/A', pageWidth - 40);
+    pdf.text(diagLines, 20, yPos);
+    yPos += diagLines.length * 7 + 10;
+    
+    if (record?.recommended_actions && record.recommended_actions.length > 0) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Recommendations:', 20, yPos);
+      yPos += 7;
+      pdf.setFont('helvetica', 'normal');
+      record.recommended_actions.forEach((action) => {
+        const actionLines = pdf.splitTextToSize(`• ${action}`, pageWidth - 40);
+        pdf.text(actionLines, 20, yPos);
+        yPos += actionLines.length * 7;
+      });
+      yPos += 10;
+    }
+    
+    // Signature section
+    yPos = pageHeight - 50;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('_______________________', pageWidth - 70, yPos);
+    yPos += 7;
+    pdf.text('Medical Officer', pageWidth - 70, yPos);
+    yPos += 5;
+    pdf.setFontSize(10);
+    pdf.text('University Health Center', pageWidth - 70, yPos);
+    
+    pdf.save(`Medical_Certificate_${record?.patient_name}_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({
+      title: "Certificate Downloaded",
+      description: "Medical certificate has been downloaded",
+    });
+  };
+
+  const handlePrintIndividualRecord = () => {
+    window.print();
+    toast({
+      title: "Print Dialog Opened",
+      description: "Individual medical record ready to print",
+    });
+  };
+
+  const handlePrintCertificate = () => {
+    window.print();
+    toast({
+      title: "Print Dialog Opened",
+      description: "Medical certificate ready to print",
+    });
+  };
+
   if (!record) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Patient Details - Medical Record
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Patient Details - Medical Record
+            </div>
+            <div className="flex items-center gap-2">
+              {!isEditMode ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={generateIndividualRecordPDF}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Record PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={generateMedicalCertificatePDF}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Certificate PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handlePrintIndividualRecord}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
+                  </Button>
+                  <Button variant="default" size="sm" onClick={() => setIsEditMode(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button variant="default" size="sm" onClick={handleSaveChanges} disabled={isSaving}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                </>
+              )}
+            </div>
           </DialogTitle>
+          <DialogDescription>
+            View and edit patient information and medical records
+          </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -169,38 +447,73 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Patient Name</p>
-                    <p className="font-semibold text-lg">{record.patient_name || 'Unknown Patient'}</p>
+                    <Label className="text-sm text-muted-foreground">Patient Name</Label>
+                    {isEditMode ? (
+                      <Input 
+                        value={editedPatient.name || ''} 
+                        onChange={(e) => setEditedPatient({...editedPatient, name: e.target.value})}
+                        className="mt-1"
+                      />
+                    ) : (
+                      <p className="font-semibold text-lg mt-1">{record.patient_name || 'Unknown Patient'}</p>
+                    )}
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Patient ID</p>
-                    <p className="font-mono text-sm">{record.patient_id || 'N/A'}</p>
+                    <Label className="text-sm text-muted-foreground">Patient ID</Label>
+                    <p className="font-mono text-sm mt-1">{record.patient_id || 'N/A'}</p>
                   </div>
                   {patientInfo && (
                     <>
                       {patientInfo.student_id && (
                         <div>
-                          <p className="text-sm text-gray-500">Student ID</p>
-                          <p className="font-mono text-sm bg-blue-50 px-2 py-1 rounded">{patientInfo.student_id}</p>
+                          <Label className="text-sm text-muted-foreground">Student ID</Label>
+                          <p className="font-mono text-sm bg-muted px-2 py-1 rounded mt-1">{patientInfo.student_id}</p>
                         </div>
                       )}
                       <div>
-                        <p className="text-sm text-gray-500">Age</p>
-                        <p className="font-semibold">{patientInfo.age} years old</p>
+                        <Label className="text-sm text-muted-foreground">Age</Label>
+                        {isEditMode ? (
+                          <Input 
+                            type="number"
+                            value={editedPatient.age || ''} 
+                            onChange={(e) => setEditedPatient({...editedPatient, age: parseInt(e.target.value)})}
+                            className="mt-1"
+                          />
+                        ) : (
+                          <p className="font-semibold mt-1">{patientInfo.age} years old</p>
+                        )}
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Gender</p>
-                        <p className="font-semibold">{patientInfo.gender}</p>
+                        <Label className="text-sm text-muted-foreground">Gender</Label>
+                        {isEditMode ? (
+                          <Select 
+                            value={editedPatient.gender || patientInfo.gender} 
+                            onValueChange={(value) => setEditedPatient({...editedPatient, gender: value as 'Male' | 'Female' | 'Other'})}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="font-semibold mt-1">{patientInfo.gender}</p>
+                        )}
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Current Status</p>
-                        <Badge variant={patientInfo.status === 'Active' ? 'default' : 'secondary'}>
-                          {patientInfo.status}
-                        </Badge>
+                        <Label className="text-sm text-muted-foreground">Current Status</Label>
+                        <div className="mt-1">
+                          <Badge variant={patientInfo.status === 'Active' ? 'default' : 'secondary'}>
+                            {patientInfo.status}
+                          </Badge>
+                        </div>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">Last Visit</p>
-                        <p className="font-semibold">
+                        <Label className="text-sm text-muted-foreground">Last Visit</Label>
+                        <p className="font-semibold mt-1">
                           {patientInfo.last_visit ? new Date(patientInfo.last_visit).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
@@ -234,49 +547,79 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">Severity Level</p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${getSeverityColor(record.severity || 0)}`}></div>
-                      <span className="font-semibold">{getSeverityLabel(record.severity || 0)}</span>
+                  <Label className="text-sm text-muted-foreground mb-1">Severity Level</Label>
+                  {isEditMode ? (
+                    <div className="mt-2">
+                      <Input 
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={editedRecord.severity || 0} 
+                        onChange={(e) => setEditedRecord({...editedRecord, severity: parseInt(e.target.value)})}
+                      />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Thermometer className="h-4 w-4 text-gray-400" />
-                      <span className="text-lg font-bold">{record.severity || 0}/10</span>
+                  ) : (
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${getSeverityColor(record.severity || 0)}`}></div>
+                        <span className="font-semibold">{getSeverityLabel(record.severity || 0)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Thermometer className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-lg font-bold">{record.severity || 0}/10</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <Separator />
 
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Diagnosis</p>
-                  <div className="flex items-start gap-2">
-                    <Heart className="h-4 w-4 text-red-500 mt-1" />
-                    <p className="font-semibold text-gray-900">{record.diagnosis || 'No diagnosis recorded'}</p>
-                  </div>
+                  <Label className="text-sm text-muted-foreground mb-2">Diagnosis</Label>
+                  {isEditMode ? (
+                    <Textarea 
+                      value={editedRecord.diagnosis || ''} 
+                      onChange={(e) => setEditedRecord({...editedRecord, diagnosis: e.target.value})}
+                      className="mt-2"
+                      rows={3}
+                    />
+                  ) : (
+                    <div className="flex items-start gap-2 mt-2">
+                      <Heart className="h-4 w-4 text-red-500 mt-1" />
+                      <p className="font-semibold">{record.diagnosis || 'No diagnosis recorded'}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Symptoms & Doctor's Notes</p>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <FileText className="h-4 w-4 text-blue-500 mt-1" />
-                      <p className="text-gray-700 leading-relaxed">
-                        {record.doctor_notes || record.notes || 'No notes recorded'}
-                      </p>
+                  <Label className="text-sm text-muted-foreground mb-2">Symptoms & Doctor's Notes</Label>
+                  {isEditMode ? (
+                    <Textarea 
+                      value={editedRecord.doctor_notes || ''} 
+                      onChange={(e) => setEditedRecord({...editedRecord, doctor_notes: e.target.value})}
+                      className="mt-2"
+                      rows={4}
+                    />
+                  ) : (
+                    <div className="bg-muted p-4 rounded-lg mt-2">
+                      <div className="flex items-start gap-2">
+                        <FileText className="h-4 w-4 text-primary mt-1" />
+                        <p className="leading-relaxed">
+                          {record.doctor_notes || record.notes || 'No notes recorded'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {record.recommended_actions && record.recommended_actions.length > 0 && (
                   <div>
-                    <p className="text-sm text-gray-500 mb-2">Recommended Actions</p>
+                    <Label className="text-sm text-muted-foreground mb-2">Recommended Actions</Label>
                     <ul className="space-y-1">
                       {record.recommended_actions.map((action, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
-                          <span className="text-gray-700">{action}</span>
+                          <span>{action}</span>
                         </li>
                       ))}
                     </ul>
@@ -301,13 +644,13 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                         key={visit.id} 
                         className={`p-3 rounded-lg border ${
                           visit.id === record.id 
-                            ? 'bg-blue-50 border-blue-200' 
-                            : 'bg-gray-50 border-gray-200'
+                            ? 'bg-primary/10 border-primary/20' 
+                            : 'bg-muted border-border'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-gray-400" />
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
                             <span className="font-semibold text-sm">
                               {new Date(visit.date || '').toLocaleDateString()}
                             </span>
@@ -323,12 +666,12 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                           </div>
                           <div className="flex items-center gap-1">
                             <div className={`w-2 h-2 rounded-full ${getSeverityColor(visit.severity || 0)}`}></div>
-                            <span className="text-xs text-gray-500">{visit.severity || 0}/10</span>
+                            <span className="text-xs text-muted-foreground">{visit.severity || 0}/10</span>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-700">{visit.diagnosis || 'No diagnosis'}</p>
+                        <p className="text-sm">{visit.diagnosis || 'No diagnosis'}</p>
                         {visit.doctor_notes && (
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                             {visit.doctor_notes}
                           </p>
                         )}
@@ -337,8 +680,8 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
                   </div>
                 ) : (
                   <div className="text-center py-6">
-                    <Clock className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500">No visit history available</p>
+                    <Clock className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-muted-foreground">No visit history available</p>
                   </div>
                 )}
               </CardContent>
