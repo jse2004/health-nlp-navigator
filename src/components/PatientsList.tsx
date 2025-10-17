@@ -19,12 +19,16 @@ const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, 
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const handleDetailsClick = async (patient: Patient) => {
+    console.log('Details clicked for patient:', patient);
     try {
       const records = await fetchMedicalRecords('', patient.id, true);
+      console.log('Fetched records:', records);
+      
       if (records.length > 0) {
         const sortedRecords = records.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime());
         setSelectedRecord(sortedRecords[0]);
         setIsDetailsOpen(true);
+        console.log('Opening modal with record:', sortedRecords[0]);
       } else {
         const dummyRecord: MedicalRecord = {
           id: `temp-${patient.id}`,
@@ -35,10 +39,12 @@ const PatientsList: React.FC<PatientsListProps> = ({ patients, onSelectPatient, 
           notes: '',
           severity: 0,
           date: new Date().toISOString(),
-          recommended_actions: []
+          recommended_actions: [],
+          status: 'active'
         };
         setSelectedRecord(dummyRecord);
         setIsDetailsOpen(true);
+        console.log('Opening modal with dummy record (no records found)');
       }
     } catch (error) {
       console.error('Error fetching patient records:', error);
