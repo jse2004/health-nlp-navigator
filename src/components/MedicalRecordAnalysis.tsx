@@ -9,13 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Clipboard, FileText, BarChart, Award, Stethoscope, Save } from 'lucide-react';
+import { Clipboard, FileText, BarChart, Award, Stethoscope } from 'lucide-react';
 import { toast } from 'sonner';
-import { saveMedicalRecord } from '@/services/dataService';
 
 interface MedicalRecordAnalysisProps {
   record?: MedicalRecord;
@@ -31,27 +26,11 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
   onSaved
 }) => {
   const [activeTab, setActiveTab] = useState('summary');
-  const [editedRecord, setEditedRecord] = useState<Partial<MedicalRecord>>({});
   const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   
-  // Initialize edited record when the record changes
+  // Analyze record when it changes
   useEffect(() => {
     if (record) {
-      setEditedRecord({ 
-        ...record,
-        // Initialize person type fields if not present
-        person_type: record.person_type || 'professor',
-        full_name: record.full_name || record.patient_name || '',
-        age: record.age || 20,
-        gender: record.gender || 'Male',
-        position: record.position || '',
-        faculty: record.faculty || '',
-        college_department: record.college_department || 'CED'
-      });
-      
-      // Analyze the doctor's notes using our NLP utility
       const doctorNotes = record.doctor_notes || record.notes || '';
       const result = analyzeMedicalText(doctorNotes);
       setAnalysisResult(result);
@@ -63,49 +42,6 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
     return null;
   }
 
-  // Handle save
-  const handleSave = async () => {
-    if (!editedRecord) return;
-    
-    setIsSaving(true);
-    try {
-      await saveMedicalRecord(editedRecord);
-      toast.success("Medical record saved successfully");
-      if (onSaved) onSaved();
-      setIsEditing(false);
-    } catch (error) {
-      console.error('Error saving record:', error);
-      toast.error("Failed to save medical record");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
-  // Handle input change
-  const handleInputChange = (field: keyof MedicalRecord, value: any) => {
-    setEditedRecord(prev => ({ ...prev, [field]: value }));
-  };
-
-  // Handle recommended action change
-  const handleActionChange = (index: number, value: string) => {
-    const updatedActions = [...(editedRecord.recommended_actions || [])];
-    updatedActions[index] = value;
-    handleInputChange('recommended_actions', updatedActions);
-  };
-
-  // Add a new recommended action
-  const addRecommendedAction = () => {
-    const updatedActions = [...(editedRecord.recommended_actions || []), ''];
-    handleInputChange('recommended_actions', updatedActions);
-  };
-
-  // Remove a recommended action
-  const removeRecommendedAction = (index: number) => {
-    const updatedActions = [...(editedRecord.recommended_actions || [])];
-    updatedActions.splice(index, 1);
-    handleInputChange('recommended_actions', updatedActions);
-  };
-
   // Calculate severity level label
   const getSeverityLabel = (value: number) => {
     if (value >= 8) return { label: "High", color: "text-medical-critical" };
@@ -113,7 +49,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
     return { label: "Low", color: "text-medical-success" };
   };
   
-  const severityInfo = getSeverityLabel(editedRecord.severity || 0);
+  const severityInfo = getSeverityLabel(record.severity || 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -125,186 +61,15 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              {isEditing ? (
-                <Input
-                  value={editedRecord.diagnosis || ''}
-                  onChange={(e) => handleInputChange('diagnosis', e.target.value)}
-                  className="font-semibold text-lg"
-                  placeholder="Diagnosis"
-                />
-              ) : (
-                <h2 className="text-lg font-semibold">{editedRecord.diagnosis}</h2>
-              )}
-              <p className="text-sm text-gray-500">Record ID: {editedRecord.id} • {new Date(editedRecord.date || '').toLocaleDateString()}</p>
+              <h2 className="text-lg font-semibold">{record.diagnosis}</h2>
+              <p className="text-sm text-gray-500">Record ID: {record.id} • {new Date(record.date || '').toLocaleDateString()}</p>
             </div>
-            {isEditing ? (
-              <div className="flex gap-2">
-                <Input 
-                  type="number" 
-                  min="1" 
-                  max="10" 
-                  value={editedRecord.severity || 5} 
-                  onChange={(e) => handleInputChange('severity', parseInt(e.target.value))}
-                  className="w-16" 
-                />
-                <span className="text-sm self-center">/10</span>
-              </div>
-            ) : (
-              <Badge 
-                className={`${severityInfo.color} bg-opacity-10`}
-                variant="outline"
-              >
-                Severity: {severityInfo.label}
-              </Badge>
-            )}
-          </div>
-          
-          {/* Person Type Selection - only show when editing */}
-          {isEditing && (
-            <Card className="mb-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Person Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="person_type">Person Type</Label>
-                    <Select
-                      value={editedRecord.person_type || 'professor'}
-                      onValueChange={(value) => handleInputChange('person_type', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="professor">Professor</SelectItem>
-                        <SelectItem value="employee">Employee</SelectItem>
-                        <SelectItem value="guest">Guest</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="full_name">Full Name</Label>
-                    <Input
-                      id="full_name"
-                      value={editedRecord.full_name || ''}
-                      onChange={(e) => handleInputChange('full_name', e.target.value)}
-                      placeholder="Enter full name"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="age">Age</Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      value={editedRecord.age || ''}
-                      onChange={(e) => handleInputChange('age', parseInt(e.target.value) || 0)}
-                      placeholder="Enter age"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="gender">Gender</Label>
-                    <Select
-                      value={editedRecord.gender || 'Male'}
-                      onValueChange={(value) => handleInputChange('gender', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {(editedRecord.person_type === 'professor' || editedRecord.person_type === 'employee') && (
-                  <div>
-                    <Label htmlFor="position">Position</Label>
-                    <Input
-                      id="position"
-                      value={editedRecord.position || ''}
-                      onChange={(e) => handleInputChange('position', e.target.value)}
-                      placeholder="Enter position"
-                    />
-                  </div>
-                )}
-
-                {editedRecord.person_type === 'professor' && (
-                  <div>
-                    <Label htmlFor="college_department">College Department</Label>
-                    <Select
-                      value={editedRecord.college_department || 'CED'}
-                      onValueChange={(value) => handleInputChange('college_department', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CED">College of Education</SelectItem>
-                        <SelectItem value="CCS">College of Computing Science</SelectItem>
-                        <SelectItem value="CCJ">College of Criminal Justice</SelectItem>
-                        <SelectItem value="CHS">College of Health Science</SelectItem>
-                        <SelectItem value="CAS">College of Arts and Science</SelectItem>
-                        <SelectItem value="CBA">College of Business Administration</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {editedRecord.person_type === 'employee' && (
-                  <div>
-                    <Label htmlFor="faculty">Faculty</Label>
-                    <Input
-                      id="faculty"
-                      value={editedRecord.faculty || ''}
-                      onChange={(e) => handleInputChange('faculty', e.target.value)}
-                      placeholder="Enter faculty"
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="mb-4 flex justify-end space-x-2">
-            {isEditing ? (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    setEditedRecord({ ...record });
-                    setIsEditing(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex items-center gap-1"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>{isSaving ? 'Saving...' : 'Save'}</span>
-                </Button>
-              </>
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                Edit
-              </Button>
-            )}
+            <Badge 
+              className={`${severityInfo.color} bg-opacity-10`}
+              variant="outline"
+            >
+              Severity: {severityInfo.label}
+            </Badge>
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -324,22 +89,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  {isEditing ? (
-                    <Textarea
-                      value={editedRecord.doctor_notes || editedRecord.notes || ''}
-                      onChange={(e) => {
-                        const notes = e.target.value;
-                        handleInputChange('doctor_notes', notes);
-                        // Re-analyze the text
-                        const result = analyzeMedicalText(notes);
-                        setAnalysisResult(result);
-                      }}
-                      className="min-h-[150px]"
-                      placeholder="Enter doctor's notes"
-                    />
-                  ) : (
-                    <p>{editedRecord.doctor_notes || editedRecord.notes || ''}</p>
-                  )}
+                  <p>{record.doctor_notes || record.notes || ''}</p>
                   
                   <div className="mt-4 flex justify-end">
                     <Button 
@@ -347,7 +97,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                       size="sm" 
                       className="flex items-center gap-1"
                       onClick={() => {
-                        navigator.clipboard.writeText(editedRecord.doctor_notes || editedRecord.notes || '');
+                        navigator.clipboard.writeText(record.doctor_notes || record.notes || '');
                         toast.success('Copied to clipboard');
                       }}
                     >
@@ -366,16 +116,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {isEditing ? (
-                    <Textarea
-                      value={editedRecord.diagnosis || ''}
-                      onChange={(e) => handleInputChange('diagnosis', e.target.value)}
-                      className="min-h-[80px]"
-                      placeholder="Enter diagnosis"
-                    />
-                  ) : (
-                    <p className="text-sm font-medium">{editedRecord.diagnosis}</p>
-                  )}
+                  <p className="text-sm font-medium">{record.diagnosis}</p>
                   
                   {analysisResult?.suggestedDiagnosis && analysisResult.suggestedDiagnosis.length > 0 && (
                     <div className="mt-3">
@@ -385,8 +126,7 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                           <Badge 
                             key={i} 
                             variant="outline" 
-                            className="bg-medical-primary/5 cursor-pointer"
-                            onClick={() => isEditing && handleInputChange('diagnosis', diagnosis)}
+                            className="bg-medical-primary/5"
                           >
                             {diagnosis}
                           </Badge>
@@ -491,53 +231,19 @@ const MedicalRecordAnalysis: React.FC<MedicalRecordAnalysisProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      {(editedRecord.recommended_actions || []).map((action, index) => (
-                        <div key={index} className="flex items-center gap-2">
+                  {record.recommended_actions && record.recommended_actions.length > 0 ? (
+                    <ul className="space-y-2">
+                      {record.recommended_actions.map((action, index) => (
+                        <li key={index} className="flex items-center gap-2">
                           <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
                             <span className="text-xs text-medical-primary">{index + 1}</span>
                           </div>
-                          <Input
-                            value={action}
-                            onChange={(e) => handleActionChange(index, e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => removeRecommendedAction(index)}
-                            className="h-8 w-8 text-destructive"
-                          >
-                            &times;
-                          </Button>
-                        </div>
+                          <span className="text-sm">{action}</span>
+                        </li>
                       ))}
-                      
-                      <Button 
-                        variant="outline" 
-                        type="button" 
-                        onClick={addRecommendedAction}
-                        className="w-full mt-2"
-                      >
-                        + Add Action
-                      </Button>
-                    </div>
+                    </ul>
                   ) : (
-                    editedRecord.recommended_actions && editedRecord.recommended_actions.length > 0 ? (
-                      <ul className="space-y-2">
-                        {editedRecord.recommended_actions.map((action, index) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-full bg-medical-primary/10 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs text-medical-primary">{index + 1}</span>
-                            </div>
-                            <span className="text-sm">{action}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-gray-500">No recommended actions</p>
-                    )
+                    <p className="text-sm text-gray-500">No recommended actions</p>
                   )}
                   
                   <div className="mt-6 flex justify-end">
