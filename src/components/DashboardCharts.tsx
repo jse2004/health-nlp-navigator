@@ -121,9 +121,11 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
-      {/* Gender Distribution Pie Chart */}
-      <Card className="col-span-1">
+    <div className="space-y-6 mt-6">
+      {/* Row 1: Gender and Department Distribution side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gender Distribution Pie Chart */}
+        <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
@@ -161,8 +163,8 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
         </CardContent>
       </Card>
 
-      {/* College Department Distribution Pie Chart */}
-      <Card className="col-span-1">
+        {/* College Department Distribution Pie Chart */}
+        <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
@@ -200,8 +202,10 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
         </CardContent>
       </Card>
 
-      {/* Weekly Visits Bar Graph */}
-      <Card className="col-span-1 lg:col-span-2 xl:col-span-1">
+      </div>
+
+      {/* Row 2: Weekly Visits Bar Graph (full width) */}
+      <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
