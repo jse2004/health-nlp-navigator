@@ -205,326 +205,36 @@ const Dashboard: React.FC = () => {
   const realInsights = generateRealInsights(patients, medicalRecords);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-background text-foreground min-h-screen">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Medical Dashboard</h1>
-          <p className="text-muted-foreground mt-1">AI-powered patient record analysis and insights.</p>
+          <p className="text-muted-foreground mt-1">Overview of patient records and key metrics</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <SearchBar onSearch={setSearchQuery} placeholder="Search patients, records..." />
-          <Button className="flex items-center gap-2" onClick={handleNewAnalysis}><FileText className="h-4 w-4" />New Medical Record</Button>
-        </div>
+        <Button className="flex items-center gap-2" onClick={handleNewAnalysis}>
+          <FileText className="h-4 w-4" />
+          New Medical Record
+        </Button>
       </div>
 
       <AnalyticsSummary data={analyticsSummary} />
 
-      <Tabs defaultValue="patients" className="w-full mt-8">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="patients" className="flex items-center gap-1.5"><Heart className="h-4 w-4" />Patients</TabsTrigger>
-            <TabsTrigger value="insights" className="flex items-center gap-1.5"><BrainCircuit className="h-4 w-4" />AI Insights</TabsTrigger>
-            <TabsTrigger value="records" className="flex items-center gap-1.5"><FileText className="h-4 w-4" />Medical Records</TabsTrigger>
-            <TabsTrigger value="saved-analyses" className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4" />Severe Cases</TabsTrigger>
-          </TabsList>
-          <Button variant="ghost" size="sm" className="text-primary flex items-center gap-1" onClick={() => setIsViewAllOpen(true)}>View All<ArrowUpRight className="h-4 w-4" /></Button>
-        </div>
-
-        <TabsContent value="patients"><PatientsList patients={patients} onSelectPatient={(patient) => handleViewPatientRecord(patient.id)} isLoading={isLoading} /></TabsContent>
-
-        <TabsContent value="insights">
-          {realInsights.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {realInsights.map((insight, i) => 
-                <InsightCard 
-                  key={i} 
-                  {...insight} 
-                  type={insight.type as any} 
-                  onReview={() => handleInsightReview(insight)}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-16 bg-card border rounded-lg">
-              <BrainCircuit className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold">No AI Insights Yet</h3>
-              <p className="text-muted-foreground max-w-md mx-auto mt-2">Insights will be generated automatically as you add more patient data and medical records.</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="records">
-          <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border/50">
-            <div className="p-6 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Medical Records</h2>
-                    <p className="text-muted-foreground">Patient records and medical analysis data</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant="secondary" className="px-3 py-1.5 font-medium">
-                    {medicalRecords.length} Total Records
-                  </Badge>
-                  <Button variant="outline" size="sm" onClick={downloadAllRecords} className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-muted rounded w-1/4 mx-auto"></div>
-                    <div className="h-4 bg-muted rounded w-1/3 mx-auto"></div>
-                    <div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
-                  </div>
-                  <p className="text-muted-foreground mt-4">Loading medical records...</p>
-                </div>
-              ) : medicalRecords.length > 0 ? (
-                <div className="space-y-4">
-                  {medicalRecords.slice(0, 8).map((record, index) => (
-                    <div key={record.id} className="group bg-background border border-border/50 rounded-lg p-5 hover:shadow-md hover:border-border transition-all duration-200">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                        {/* Record ID and Status */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <span className="text-primary font-semibold text-sm">#{index + 1}</span>
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-mono text-sm text-foreground bg-muted/50 px-2 py-1 rounded-md inline-block">
-                              ID: {record.id.split('-')[0]}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {new Date(record.date || '').toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                year: 'numeric' 
-                              })}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Patient Info */}
-                        <div>
-                          <div className="font-medium text-foreground">
-                            {record.patient_name || "Unknown Patient"}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {record.diagnosis ? record.diagnosis.substring(0, 30) + (record.diagnosis.length > 30 ? '...' : '') : 'No diagnosis'}
-                          </div>
-                        </div>
-
-                        {/* Severity Indicator */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-muted-foreground">Severity</span>
-                              <span className="text-xs font-semibold text-foreground">{record.severity}/10</span>
-                            </div>
-                            <div className="h-2 bg-muted rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  record.severity >= 9 ? 'bg-destructive' : 
-                                  record.severity >= 7 ? 'bg-orange-500' : 
-                                  record.severity >= 5 ? 'bg-yellow-500' : 
-                                  'bg-green-500'
-                                }`} 
-                                style={{ width: `${(record.severity / 10) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                          <Badge 
-                            variant={record.severity >= 8 ? "destructive" : record.severity >= 6 ? "secondary" : "outline"}
-                            className="ml-2"
-                          >
-                            {record.severity >= 8 ? 'Critical' : record.severity >= 6 ? 'High' : record.severity >= 4 ? 'Medium' : 'Low'}
-                          </Badge>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-primary hover:text-primary/80 hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" 
-                            onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity" 
-                            onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
-                          >
-                            Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-destructive hover:text-destructive/80 hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" 
-                            onClick={() => handleDeleteAnalysis(record.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {medicalRecords.length > 8 && (
-                    <div className="text-center pt-6 border-t border-border/50">
-                      <Button variant="outline" onClick={() => setIsViewAllOpen(true)} className="gap-2">
-                        View All {medicalRecords.length} Records
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <div className="max-w-md mx-auto">
-                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <FileText className="h-10 w-10 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-foreground mb-3">No Medical Records</h3>
-                    <p className="text-muted-foreground mb-6">Start by creating your first medical record to track patient data and analysis.</p>
-                    <Button onClick={handleNewAnalysis} size="lg" className="gap-2">
-                      <FileText className="h-5 w-5" />
-                      Create First Record
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="saved-analyses">
-          <div className="bg-card text-card-foreground rounded-lg shadow-sm border">
-            <div className="p-6 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-destructive/10 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-destructive" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold">Severe Cases</h2>
-                    <p className="text-sm text-muted-foreground">High-priority cases requiring immediate attention</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="destructive" className="px-3 py-1">
-                    {severeCases.length} Active
-                  </Badge>
-                  {severeCases.length > 5 && (
-                    <Button variant="outline" size="sm" onClick={() => setIsSevereCasesModalOpen(true)}>
-                      View All <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              {severeCases.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="p-4 bg-muted/30 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                    <AlertTriangle className="h-8 w-8 text-muted-foreground/50" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-muted-foreground">No Severe Cases</h3>
-                  <p className="text-sm text-muted-foreground/80 max-w-md mx-auto mt-2">
-                    Currently no high-priority cases (severity 8-10) require immediate attention.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {severeCases.slice(0, 5).map(record => (
-                    <div 
-                      key={record.id} 
-                      className={`p-4 rounded-lg border transition-all hover:shadow-md ${getSeverityBg(record.severity)}`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-3">
-                            <Badge variant={getSeverityColor(record.severity)} className="font-bold">
-                              SEVERITY {record.severity}/10
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(record.date).toLocaleDateString()}
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Patient</h4>
-                              <p className="font-medium">{record.patient_name || "Unknown"}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Diagnosis</h4>
-                              <p className="text-sm">{record.diagnosis || "Not diagnosed"}</p>
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Notes</h4>
-                              <p className="text-sm line-clamp-2">{record.doctor_notes || "No notes"}</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex gap-2 ml-4">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => { setSelectedRecord(record); setIsAnalysisOpen(true); }}
-                            className="h-8"
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => { setSelectedRecordForDetails(record); setIsRecordDetailsOpen(true); }}
-                            className="h-8"
-                          >
-                            Details
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {severeCases.length > 5 && (
-                    <div className="pt-4 border-t border-border/50">
-                      <Button 
-                        variant="ghost" 
-                        className="w-full" 
-                        onClick={() => setIsSevereCasesModalOpen(true)}
-                      >
-                        View All {severeCases.length} Severe Cases <ChevronRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <MedicalRecordAnalysis record={selectedRecord} isOpen={isAnalysisOpen} onClose={() => setIsAnalysisOpen(false)} onSaved={loadData} />
-      <PatientDetailsModal record={selectedRecordForDetails} isOpen={isRecordDetailsOpen} onClose={() => setIsRecordDetailsOpen(false)} />
-      <NewNLPAnalysis isOpen={isNewAnalysisOpen} onClose={() => setIsNewAnalysisOpen(false)} onSaved={loadData} />
+      {/* Modals */}
+      <NewNLPAnalysis 
+        isOpen={isNewAnalysisOpen} 
+        onClose={() => { setIsNewAnalysisOpen(false); loadData(); }} 
+      />
+      <MedicalRecordAnalysis 
+        record={selectedRecord} 
+        isOpen={isAnalysisOpen} 
+        onClose={() => setIsAnalysisOpen(false)} 
+        onSaved={loadData} 
+      />
+      <PatientDetailsModal 
+        record={selectedRecordForDetails} 
+        isOpen={isRecordDetailsOpen} 
+        onClose={() => setIsRecordDetailsOpen(false)} 
+      />
       
       {isViewAllOpen && 
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">

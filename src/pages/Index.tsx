@@ -1,89 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart3, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { BarChart3, Users, BrainCircuit, FileText, AlertTriangle } from 'lucide-react';
 import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
-import PatientsList from '@/components/PatientsList';
-import SearchBar from '@/components/SearchBar';
-import { fetchPatients } from '@/services/dataService';
-import { Patient } from '@/data/sampleData';
-import { supabase } from '@/integrations/supabase/client';
+import PatientsPage from '@/pages/PatientsPage';
+import AIInsightsPage from '@/pages/AIInsightsPage';
+import MedicalRecordsPage from '@/pages/MedicalRecordsPage';
+import SevereCasesPage from '@/pages/SevereCasesPage';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoadingPatients, setIsLoadingPatients] = useState(false);
-
-  // Load patients when the patients section is active
-  useEffect(() => {
-    if (activeSection === 'patients') {
-      loadPatients();
-    }
-  }, [activeSection, searchQuery]);
-
-  // Set up real-time subscription for patient updates
-  useEffect(() => {
-    if (activeSection !== 'patients') return;
-
-    const channel = supabase
-      .channel('patients-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'patients'
-        },
-        (payload) => {
-          console.log('Patient data changed:', payload);
-          // Reload patients to get fresh data
-          loadPatients();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeSection, searchQuery]);
-
-  const loadPatients = async () => {
-    setIsLoadingPatients(true);
-    try {
-      const patientsData = await fetchPatients(searchQuery);
-      setPatients(patientsData);
-    } catch (error) {
-      console.error('Error loading patients:', error);
-      setPatients([]);
-    } finally {
-      setIsLoadingPatients(false);
-    }
-  };
-
-  const handlePatientSearch = (query: string) => {
-    setSearchQuery(query);
-  };
 
   const renderSection = () => {
     switch (activeSection) {
       case 'dashboard':
         return <Dashboard />;
       case 'patients':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Patients</h1>
-              <SearchBar 
-                onSearch={handlePatientSearch}
-                placeholder="Search patients by name, condition, or status..."
-              />
-            </div>
-            <PatientsList 
-              patients={patients} 
-              isLoading={isLoadingPatients}
-            />
-          </div>
-        );
+        return <PatientsPage />;
+      case 'ai-insights':
+        return <AIInsightsPage />;
+      case 'medical-records':
+        return <MedicalRecordsPage />;
+      case 'severe-cases':
+        return <SevereCasesPage />;
       default:
         return <Dashboard />;
     }
@@ -125,6 +63,42 @@ const Index = () => {
               >
                 <Users className="h-5 w-5" />
                 <span>Patients</span>
+              </button>
+
+              <button
+                onClick={() => setActiveSection('ai-insights')}
+                className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-xl transition-all ${
+                  activeSection === 'ai-insights'
+                    ? 'bg-medical-primary text-white shadow-lg'
+                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <BrainCircuit className="h-5 w-5" />
+                <span>AI Insights</span>
+              </button>
+
+              <button
+                onClick={() => setActiveSection('medical-records')}
+                className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-xl transition-all ${
+                  activeSection === 'medical-records'
+                    ? 'bg-medical-primary text-white shadow-lg'
+                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <FileText className="h-5 w-5" />
+                <span>Medical Records</span>
+              </button>
+
+              <button
+                onClick={() => setActiveSection('severe-cases')}
+                className={`w-full flex items-center space-x-3 px-4 py-3 text-left rounded-xl transition-all ${
+                  activeSection === 'severe-cases'
+                    ? 'bg-medical-primary text-white shadow-lg'
+                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                <AlertTriangle className="h-5 w-5" />
+                <span>Severe Cases</span>
               </button>
             </nav>
           </div>
