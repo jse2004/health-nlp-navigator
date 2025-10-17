@@ -294,64 +294,74 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
+    const lineSpacing = 14; // 2.0 line spacing in mm (approximately)
+    const leftMargin = 25;
+    const rightMargin = 25;
+    const contentWidth = pageWidth - leftMargin - rightMargin;
     
-    // Header
-    pdf.setFontSize(22);
+    // Header - UNIVERSIDAD DE MANILA
+    let yPos = 40;
+    pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('MEDICAL CERTIFICATE', pageWidth / 2, 25, { align: 'center' });
+    pdf.text('UNIVERSIDAD DE MANILA', pageWidth / 2, yPos, { align: 'center' });
     
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Certificate No: CERT-${record?.id}`, pageWidth / 2, 33, { align: 'center' });
-    pdf.text(`Issue Date: ${new Date().toLocaleDateString()}`, pageWidth / 2, 39, { align: 'center' });
-    
-    // Border
-    pdf.setLineWidth(0.5);
-    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
-    
-    // Content
-    let yPos = 55;
+    // Certificate Number
+    yPos += lineSpacing * 1.5;
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
+    pdf.text(`CERTIFICATE NO: CERT-${record?.id}`, pageWidth / 2, yPos, { align: 'center' });
     
-    const certText = `This is to certify that ${record?.patient_name || 'N/A'}, ` +
-                    `${patientInfo?.age ? `aged ${patientInfo.age} years` : ''}, ` +
-                    `was examined on ${record?.date ? new Date(record.date).toLocaleDateString() : 'N/A'}.`;
+    // Date
+    yPos += lineSpacing;
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    pdf.text(`Date: ${currentDate}`, pageWidth / 2, yPos, { align: 'center' });
     
-    const certLines = pdf.splitTextToSize(certText, pageWidth - 40);
-    pdf.text(certLines, 20, yPos);
-    yPos += certLines.length * 7 + 10;
-    
+    // TO WHOM IT MAY CONCERN
+    yPos += lineSpacing * 2;
+    pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Diagnosis:', 20, yPos);
-    yPos += 7;
-    pdf.setFont('helvetica', 'normal');
-    const diagLines = pdf.splitTextToSize(record?.diagnosis || 'N/A', pageWidth - 40);
-    pdf.text(diagLines, 20, yPos);
-    yPos += diagLines.length * 7 + 10;
+    pdf.text('TO WHOM IT MAY CONCERN:', leftMargin, yPos);
     
-    if (record?.recommended_actions && record.recommended_actions.length > 0) {
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Recommendations:', 20, yPos);
-      yPos += 7;
-      pdf.setFont('helvetica', 'normal');
-      record.recommended_actions.forEach((action) => {
-        const actionLines = pdf.splitTextToSize(`• ${action}`, pageWidth - 40);
-        pdf.text(actionLines, 20, yPos);
-        yPos += actionLines.length * 7;
-      });
-      yPos += 10;
-    }
-    
-    // Signature section
-    yPos = pageHeight - 50;
+    // Main certification text
+    yPos += lineSpacing * 2;
     pdf.setFont('helvetica', 'normal');
-    pdf.text('_______________________', pageWidth - 70, yPos);
-    yPos += 7;
-    pdf.text('Medical Officer', pageWidth - 70, yPos);
-    yPos += 5;
-    pdf.setFontSize(10);
-    pdf.text('University Health Center', pageWidth - 70, yPos);
+    pdf.setFontSize(12);
+    
+    const visitDate = record?.date ? new Date(record.date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }) : currentDate;
+    
+    const certificationText = `This is to certify that ${record?.patient_name || 'N/A'}, ${patientInfo?.age || 'N/A'}, has been seen, examined, and/or treated on ${visitDate} with the following findings: ${record?.diagnosis || 'N/A'}.`;
+    
+    const certLines = pdf.splitTextToSize(certificationText, contentWidth);
+    certLines.forEach((line: string) => {
+      pdf.text(line, leftMargin, yPos);
+      yPos += lineSpacing;
+    });
+    
+    // Disclaimer text
+    yPos += lineSpacing;
+    const disclaimerText = 'This certificate is issued upon his/her request for whatever purpose it may serve, except for Medico-Legal cases.';
+    const disclaimerLines = pdf.splitTextToSize(disclaimerText, contentWidth);
+    disclaimerLines.forEach((line: string) => {
+      pdf.text(line, leftMargin, yPos);
+      yPos += lineSpacing;
+    });
+    
+    // Recommendation section
+    yPos += lineSpacing * 2;
+    pdf.text('Recommendation: ___________________________', leftMargin, yPos);
+    
+    // University Physician section at bottom
+    const bottomMargin = 40;
+    yPos = pageHeight - bottomMargin;
+    pdf.text('University Physician: ________________________', leftMargin, yPos);
     
     pdf.save(`Medical_Certificate_${record?.patient_name}_${new Date().toISOString().split('T')[0]}.pdf`);
     
