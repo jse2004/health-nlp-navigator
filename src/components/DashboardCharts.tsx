@@ -132,16 +132,16 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
           <CardDescription>Patient distribution by gender</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={genderChartConfig} className="h-[300px]">
+          <ChartContainer config={genderChartConfig} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={genderData}
                   cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
+                  cy="45%"
+                  labelLine={true}
+                  label={({ name, percent }) => (percent * 100).toFixed(0) + '%'}
+                  outerRadius={90}
                   fill="hsl(var(--primary))"
                   dataKey="value"
                 >
@@ -150,7 +150,11 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
                   ))}
                 </Pie>
                 <ChartTooltip content={<CustomTooltip />} />
-                <Legend />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  iconType="circle"
+                />
               </PieChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -167,16 +171,16 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
           <CardDescription>Student distribution by department</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={departmentChartConfig} className="h-[300px]">
+          <ChartContainer config={departmentChartConfig} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={departmentData}
                   cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
-                  outerRadius={80}
+                  cy="45%"
+                  labelLine={true}
+                  label={({ percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''}
+                  outerRadius={90}
                   fill="hsl(var(--primary))"
                   dataKey="value"
                 >
@@ -185,7 +189,11 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
                   ))}
                 </Pie>
                 <ChartTooltip content={<CustomTooltip />} />
-                <Legend />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  iconType="circle"
+                />
               </PieChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -202,9 +210,9 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
           <CardDescription>Consultations in the last 7 days</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={weeklyChartConfig} className="h-[300px]">
+          <ChartContainer config={weeklyChartConfig} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyVisitsData}>
+              <BarChart data={weeklyVisitsData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
                   dataKey="day" 
@@ -214,6 +222,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
                 <YAxis 
                   stroke="hsl(var(--muted-foreground))"
                   tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  allowDecimals={false}
                 />
                 <ChartTooltip content={<CustomBarTooltip />} />
                 <Bar 
