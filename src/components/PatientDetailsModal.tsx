@@ -313,7 +313,7 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
     try {
       const [leftLogo, rightLogo] = await Promise.all([
         loadImage('/udm_clinic.png'),
-        loadImage('/udm-logo.png')
+        loadImage('/udm_logo.png')
       ]);
 
       // Header with logos - UNIVERSIDAD DE MANILA
