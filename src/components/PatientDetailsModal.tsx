@@ -211,83 +211,135 @@ const PatientDetailsModal: React.FC<PatientDetailsModalProps> = ({
   const generateIndividualRecordPDF = async () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
+    const leftMargin = 20;
+    const rightMargin = 20;
+    const contentWidth = pageWidth - leftMargin - rightMargin;
     
-    // Header
-    pdf.setFontSize(20);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Medical Record', pageWidth / 2, 20, { align: 'center' });
-    
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Record ID: ${record?.id}`, pageWidth / 2, 28, { align: 'center' });
-    pdf.text(`Date: ${record?.date ? formatDate(record.date) : 'N/A'}`, pageWidth / 2, 34, { align: 'center' });
-    
-    // Patient Information
-    let yPos = 45;
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Patient Information', 15, yPos);
-    
-    yPos += 8;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Name: ${record?.patient_name || 'N/A'}`, 15, yPos);
-    yPos += 6;
-    pdf.text(`Patient ID: ${record?.patient_id || 'N/A'}`, 15, yPos);
-    yPos += 6;
-    if (patientInfo?.student_id) {
-      pdf.text(`Student ID: ${patientInfo.student_id}`, 15, yPos);
-      yPos += 6;
-    }
-    pdf.text(`Age: ${patientInfo?.age || 'N/A'} | Gender: ${patientInfo?.gender || 'N/A'}`, 15, yPos);
-    
-    // Medical Details
-    yPos += 12;
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Medical Details', 15, yPos);
-    
-    yPos += 8;
-    pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Severity Level: ${getSeverityLabel(record?.severity || 0)} (${record?.severity || 0}/10)`, 15, yPos);
-    
-    yPos += 8;
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Diagnosis:', 15, yPos);
-    yPos += 6;
-    pdf.setFont('helvetica', 'normal');
-    const diagnosisLines = pdf.splitTextToSize(record?.diagnosis || 'No diagnosis recorded', pageWidth - 30);
-    pdf.text(diagnosisLines, 15, yPos);
-    yPos += diagnosisLines.length * 6 + 4;
-    
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Doctor\'s Notes:', 15, yPos);
-    yPos += 6;
-    pdf.setFont('helvetica', 'normal');
-    const notesLines = pdf.splitTextToSize(record?.doctor_notes || 'No notes recorded', pageWidth - 30);
-    pdf.text(notesLines, 15, yPos);
-    yPos += notesLines.length * 6 + 4;
-    
-    if (record?.recommended_actions && record.recommended_actions.length > 0) {
-      yPos += 4;
+    // Load logos
+    const loadImage = (url: string): Promise<HTMLImageElement> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+    };
+
+    try {
+      const [leftLogo, rightLogo] = await Promise.all([
+        loadImage('/udm_clinic.png'),
+        loadImage('/udm_logo.png')
+      ]);
+
+      // Header with logos - UNIVERSIDAD DE MANILA
+      let yPos = 25;
+      const logoSize = 25; // Logo size in mm
+      const logoY = yPos;
+      
+      // Add left logo
+      pdf.addImage(leftLogo, 'PNG', leftMargin, logoY, logoSize, logoSize);
+      
+      // Add right logo
+      pdf.addImage(rightLogo, 'PNG', pageWidth - rightMargin - logoSize, logoY, logoSize, logoSize);
+      
+      // Center text - Universidad De Manila
+      yPos = yPos + (logoSize / 2) + 2;
+      pdf.setFontSize(18);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Recommended Actions:', 15, yPos);
+      pdf.text('Universidad De Manila', pageWidth / 2, yPos, { align: 'center' });
+      
+      // Title - Personal Medical Record
+      yPos += 12;
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Personal Medical Record', pageWidth / 2, yPos, { align: 'center' });
+      
+      // Record ID and Date
+      yPos += 10;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Record ID: ${record?.id}`, leftMargin, yPos);
+      pdf.text(`Date: ${record?.date ? new Date(record.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}`, pageWidth - rightMargin, yPos, { align: 'right' });
+      
+      // Patient Information Section
+      yPos += 15;
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Patient Information', leftMargin, yPos);
+      
+      yPos += 8;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      
+      // Two column layout for patient info
+      const col1X = leftMargin;
+      const col2X = pageWidth / 2 + 5;
+      
+      pdf.text(`Name: ${record?.patient_name || 'N/A'}`, col1X, yPos);
+      pdf.text(`Patient ID: ${record?.patient_id || 'N/A'}`, col2X, yPos);
+      
+      yPos += 7;
+      pdf.text(`College Department: ${patientInfo?.college_department || 'N/A'}`, col1X, yPos);
+      if (patientInfo?.student_id) {
+        pdf.text(`Student ID: ${patientInfo.student_id}`, col2X, yPos);
+        yPos += 7;
+      }
+      
+      if (!patientInfo?.student_id) {
+        yPos += 7;
+      }
+      pdf.text(`Age: ${patientInfo?.age || 'N/A'}`, col1X, yPos);
+      pdf.text(`Gender: ${patientInfo?.gender || 'N/A'}`, col2X, yPos);
+      
+      // Medical Details Section
+      yPos += 15;
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Medical Details', leftMargin, yPos);
+      
+      yPos += 8;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Severity Level: ${getSeverityLabel(record?.severity || 0)} (${record?.severity || 0}/10)`, leftMargin, yPos);
+      
+      yPos += 10;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Diagnosis:', leftMargin, yPos);
       yPos += 6;
       pdf.setFont('helvetica', 'normal');
-      record.recommended_actions.forEach((action) => {
-        const actionLines = pdf.splitTextToSize(`• ${action}`, pageWidth - 30);
-        pdf.text(actionLines, 15, yPos);
-        yPos += actionLines.length * 6;
+      const diagnosisLines = pdf.splitTextToSize(record?.diagnosis || 'No diagnosis recorded', contentWidth);
+      pdf.text(diagnosisLines, leftMargin, yPos);
+      yPos += diagnosisLines.length * 6 + 4;
+      
+      // Recommended Actions
+      if (record?.recommended_actions && record.recommended_actions.length > 0) {
+        yPos += 6;
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Recommended Actions:', leftMargin, yPos);
+        yPos += 6;
+        pdf.setFont('helvetica', 'normal');
+        record.recommended_actions.forEach((action) => {
+          const actionLines = pdf.splitTextToSize(`• ${action}`, contentWidth);
+          pdf.text(actionLines, leftMargin, yPos);
+          yPos += actionLines.length * 6;
+        });
+      }
+      
+      pdf.save(`Medical_Record_${record?.id}.pdf`);
+      
+      toast({
+        title: "PDF Downloaded",
+        description: "Individual medical record has been downloaded",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive"
       });
     }
-    
-    pdf.save(`Medical_Record_${record?.id}.pdf`);
-    
-    toast({
-      title: "PDF Downloaded",
-      description: "Individual medical record has been downloaded",
-    });
   };
 
   const generateMedicalCertificatePDF = async () => {
