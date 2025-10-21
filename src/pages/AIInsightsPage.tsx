@@ -125,7 +125,7 @@ const AIInsightsPage = () => {
 
       {/* Insight Review Dialog */}
       <Dialog open={isInsightReviewOpen} onOpenChange={setIsInsightReviewOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BrainCircuit className="h-5 w-5" />
@@ -139,9 +139,78 @@ const AIInsightsPage = () => {
                 <p className="mt-3 text-muted-foreground">{selectedInsight.content}</p>
               </div>
               {selectedInsight.details && (
-                <div className="bg-muted/30 p-4 rounded-lg">
-                  <h4 className="font-semibold mb-2">Details</h4>
-                  <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(selectedInsight.details, null, 2)}</pre>
+                <div className="bg-muted/30 p-4 rounded-lg space-y-4">
+                  <h4 className="font-semibold">Details</h4>
+                  
+                  {/* Condition Spotlight Details */}
+                  {selectedInsight.details.condition && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-background rounded-lg">
+                        <span className="font-medium">Condition</span>
+                        <span className="text-muted-foreground">{selectedInsight.details.condition}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-background rounded-lg">
+                        <span className="font-medium">Total Cases</span>
+                        <Badge variant="secondary">{selectedInsight.details.count}</Badge>
+                      </div>
+                      {selectedInsight.details.relatedPatients && selectedInsight.details.relatedPatients.length > 0 && (
+                        <div className="space-y-2">
+                          <span className="font-medium text-sm">Affected Patients</span>
+                          <div className="max-h-[200px] overflow-y-auto space-y-2">
+                            {selectedInsight.details.relatedPatients.map((patient: Patient, idx: number) => (
+                              <div key={idx} className="p-3 bg-background rounded-lg flex justify-between items-center">
+                                <div>
+                                  <p className="font-medium">{patient.name}</p>
+                                  <p className="text-sm text-muted-foreground">ID: {patient.id}</p>
+                                </div>
+                                <Badge variant={patient.status === 'Active' ? 'default' : 'secondary'}>
+                                  {patient.status}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* High-Severity or Recent Activity or Pending Diagnoses Details */}
+                  {selectedInsight.details.records && selectedInsight.details.records.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-background rounded-lg">
+                        <span className="font-medium">Total Records</span>
+                        <Badge variant="secondary">{selectedInsight.details.count}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <span className="font-medium text-sm">Records</span>
+                        <div className="max-h-[300px] overflow-y-auto space-y-2">
+                          {selectedInsight.details.records.map((record: MedicalRecord, idx: number) => (
+                            <div key={idx} className="p-3 bg-background rounded-lg space-y-2">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium">Record #{record.id}</p>
+                                  <p className="text-sm text-muted-foreground">Patient ID: {record.patient_id}</p>
+                                </div>
+                                {record.severity && (
+                                  <Badge variant={record.severity >= 8 ? 'destructive' : 'secondary'}>
+                                    Severity: {record.severity}
+                                  </Badge>
+                                )}
+                              </div>
+                              {record.diagnosis && (
+                                <p className="text-sm"><span className="font-medium">Diagnosis:</span> {record.diagnosis}</p>
+                              )}
+                              {record.date && (
+                                <p className="text-xs text-muted-foreground">
+                                  Date: {new Date(record.date).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
