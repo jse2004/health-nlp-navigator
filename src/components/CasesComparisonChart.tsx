@@ -7,12 +7,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface CasesComparisonChartProps {
   medicalRecords: MedicalRecord[];
-  onDataProcessed?: (totalActiveCases: number) => void;
 }
 
 const CHART_COLOR = 'hsl(var(--chart-1))';
 
-const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalRecords, onDataProcessed }) => {
+const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalRecords }) => {
   // Process data: group active medical records by diagnosis
   const { chartData, totalActiveCases, chartSummary } = useMemo(() => {
     // Filter only active records
@@ -58,12 +57,6 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
     };
   }, [medicalRecords]);
 
-  // Notify parent of processed data
-  React.useEffect(() => {
-    if (onDataProcessed) {
-      onDataProcessed(totalActiveCases);
-    }
-  }, [totalActiveCases, onDataProcessed]);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {

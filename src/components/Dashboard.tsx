@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DashboardCharts from './DashboardCharts';
 import CasesComparisonChart from './CasesComparisonChart';
+import OverallCasesSummary from './OverallCasesSummary';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
@@ -37,7 +38,6 @@ const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [analyticsSummary, setAnalyticsSummary] = useState({ totalPatients: 0, criticalCases: 0, pendingReviews: 0, recentAdmissions: 0, previousTotalPatients: 0, previousCriticalCases: 0, previousPendingReviews: 0 });
-  const [totalActiveCases, setTotalActiveCases] = useState(0);
 
   const loadAnalyticsData = async () => {
     try {
@@ -223,30 +223,13 @@ const Dashboard: React.FC = () => {
       <AnalyticsSummary data={analyticsSummary} />
 
       {/* Overall Cases Summary */}
-      <Alert className="border-primary/20 bg-primary/5">
-        <AlertCircle className="h-4 w-4 text-primary" />
-        <AlertTitle className="text-base font-semibold">Overall Cases Summary</AlertTitle>
-        <AlertDescription className="text-sm mt-2">
-          {totalActiveCases === 0 ? (
-            'There are currently no active cases in the system.'
-          ) : totalActiveCases === 1 ? (
-            'There is currently 1 active case in the database.'
-          ) : (
-            `There are currently ${totalActiveCases} active cases in the database.`
-          )}
-          {' '}
-          This includes all patients who are currently being treated or monitored by medical staff.
-        </AlertDescription>
-      </Alert>
+      <OverallCasesSummary medicalRecords={medicalRecords} />
 
       {/* Visualization Charts */}
       <DashboardCharts patients={patients} medicalRecords={medicalRecords} />
 
       {/* Cases Comparison Chart */}
-      <CasesComparisonChart 
-        medicalRecords={medicalRecords} 
-        onDataProcessed={setTotalActiveCases}
-      />
+      <CasesComparisonChart medicalRecords={medicalRecords} />
 
       {/* Modals */}
       <NewNLPAnalysis 
