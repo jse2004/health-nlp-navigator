@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info, AlertTriangle, ChevronRight, X } from 'lucide-react';
+import { ArrowUpRight, BrainCircuit, FileText, Heart, Save, Search, Download, Eye, Info, AlertTriangle, ChevronRight, X, AlertCircle } from 'lucide-react';
 import { Patient, MedicalRecord } from '@/data/sampleData';
 import AnalyticsSummary from './AnalyticsSummary';
 import PatientsList from './PatientsList';
@@ -37,6 +37,7 @@ const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [analyticsSummary, setAnalyticsSummary] = useState({ totalPatients: 0, criticalCases: 0, pendingReviews: 0, recentAdmissions: 0, previousTotalPatients: 0, previousCriticalCases: 0, previousPendingReviews: 0 });
+  const [totalActiveCases, setTotalActiveCases] = useState(0);
 
   const loadAnalyticsData = async () => {
     try {
@@ -221,11 +222,31 @@ const Dashboard: React.FC = () => {
 
       <AnalyticsSummary data={analyticsSummary} />
 
+      {/* Overall Cases Summary */}
+      <Alert className="border-primary/20 bg-primary/5">
+        <AlertCircle className="h-4 w-4 text-primary" />
+        <AlertTitle className="text-base font-semibold">Overall Cases Summary</AlertTitle>
+        <AlertDescription className="text-sm mt-2">
+          {totalActiveCases === 0 ? (
+            'There are currently no active cases in the system.'
+          ) : totalActiveCases === 1 ? (
+            'There is currently 1 active case in the database.'
+          ) : (
+            `There are currently ${totalActiveCases} active cases in the database.`
+          )}
+          {' '}
+          This includes all patients who are currently being treated or monitored by medical staff.
+        </AlertDescription>
+      </Alert>
+
       {/* Visualization Charts */}
       <DashboardCharts patients={patients} medicalRecords={medicalRecords} />
 
-      {/* Cases Comparison Chart with Summaries */}
-      <CasesComparisonChart medicalRecords={medicalRecords} />
+      {/* Cases Comparison Chart */}
+      <CasesComparisonChart 
+        medicalRecords={medicalRecords} 
+        onDataProcessed={setTotalActiveCases}
+      />
 
       {/* Modals */}
       <NewNLPAnalysis 

@@ -7,17 +7,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface CasesComparisonChartProps {
   medicalRecords: MedicalRecord[];
+  onDataProcessed?: (totalActiveCases: number) => void;
 }
 
-const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-];
+const CHART_COLOR = 'hsl(var(--chart-1))';
 
-const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalRecords }) => {
+const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalRecords, onDataProcessed }) => {
   // Process data: group active medical records by diagnosis
   const { chartData, totalActiveCases, chartSummary } = useMemo(() => {
     // Filter only active records
@@ -63,6 +58,13 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
     };
   }, [medicalRecords]);
 
+  // Notify parent of processed data
+  React.useEffect(() => {
+    if (onDataProcessed) {
+      onDataProcessed(totalActiveCases);
+    }
+  }, [totalActiveCases, onDataProcessed]);
+
   // Custom tooltip
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -79,9 +81,7 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
   };
 
   return (
-    <div className="space-y-6">
-      {/* Bar Chart Section */}
-      <Card className="border-border/50 shadow-sm">
+    <Card className="border-border/50 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -94,16 +94,17 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
         <CardContent>
           {chartData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
+              <ResponsiveContainer width="100%" height={450}>
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 120 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis 
                     dataKey="diagnosis" 
                     angle={-45} 
                     textAnchor="end" 
-                    height={100}
+                    height={120}
+                    interval={0}
                     stroke="hsl(var(--muted-foreground))"
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   />
                   <YAxis 
                     stroke="hsl(var(--muted-foreground))"
@@ -115,11 +116,7 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
                     wrapperStyle={{ paddingTop: '20px' }}
                     formatter={() => 'Number of Patients'}
                   />
-                  <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Bar>
+                  <Bar dataKey="count" radius={[8, 8, 0, 0]} fill={CHART_COLOR} />
                 </BarChart>
               </ResponsiveContainer>
 
@@ -141,24 +138,6 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
           )}
         </CardContent>
       </Card>
-
-      {/* Overall Cases Summary */}
-      <Alert className="border-primary/20 bg-primary/5">
-        <AlertCircle className="h-4 w-4 text-primary" />
-        <AlertTitle className="text-base font-semibold">Overall Cases Summary</AlertTitle>
-        <AlertDescription className="text-sm mt-2">
-          {totalActiveCases === 0 ? (
-            'There are currently no active cases in the system.'
-          ) : totalActiveCases === 1 ? (
-            'There is currently 1 active case in the database.'
-          ) : (
-            `There are currently ${totalActiveCases} active cases in the database.`
-          )}
-          {' '}
-          This includes all patients who are currently being treated or monitored by medical staff.
-        </AlertDescription>
-      </Alert>
-    </div>
   );
 };
 
