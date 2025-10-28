@@ -9,7 +9,7 @@ interface CasesComparisonChartProps {
   medicalRecords: MedicalRecord[];
 }
 
-const CHART_COLOR = 'hsl(var(--chart-1))';
+const CHART_COLOR = 'hsl(217, 91%, 60%)'; // Blue color
 
 const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalRecords }) => {
   // Process data: group active medical records by diagnosis
@@ -74,7 +74,7 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
   };
 
   return (
-    <Card className="border-border/50 shadow-sm">
+    <Card className="border-border/50 shadow-sm overflow-visible">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -84,20 +84,20 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
             Number of patients currently being treated for each diagnosis
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-8">
           {chartData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={450}>
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 120 }}>
+              <ResponsiveContainer width="100%" height={500}>
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 140 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis 
                     dataKey="diagnosis" 
                     angle={-45} 
                     textAnchor="end" 
-                    height={120}
+                    height={140}
                     interval={0}
                     stroke="hsl(var(--muted-foreground))"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                   />
                   <YAxis 
                     stroke="hsl(var(--muted-foreground))"
