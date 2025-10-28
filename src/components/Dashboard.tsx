@@ -17,6 +17,7 @@ import AppointmentScheduler from './AppointmentScheduler';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DashboardCharts from './DashboardCharts';
+import CasesComparisonChart from './CasesComparisonChart';
 
 const Dashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | undefined>(undefined);
@@ -222,6 +223,9 @@ const Dashboard: React.FC = () => {
 
       {/* Visualization Charts */}
       <DashboardCharts patients={patients} medicalRecords={medicalRecords} />
+
+      {/* Cases Comparison Chart with Summaries */}
+      <CasesComparisonChart medicalRecords={medicalRecords} />
 
       {/* Modals */}
       <NewNLPAnalysis 
