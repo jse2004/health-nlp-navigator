@@ -84,11 +84,11 @@ const CasesComparisonChart: React.FC<CasesComparisonChartProps> = ({ medicalReco
             Number of patients currently being treated for each diagnosis
           </CardDescription>
         </CardHeader>
-        <CardContent className="pb-8">
+        <CardContent className="px-6 pb-12 pt-6">
           {chartData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={500}>
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 140 }}>
+              <ResponsiveContainer width="100%" height={520}>
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 30, bottom: 150 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis 
                     dataKey="diagnosis" 
