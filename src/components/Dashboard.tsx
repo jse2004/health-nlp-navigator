@@ -17,7 +17,6 @@ import AppointmentScheduler from './AppointmentScheduler';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import DashboardCharts from './DashboardCharts';
-import CasesComparisonChart from './CasesComparisonChart';
 import OverallCasesSummary from './OverallCasesSummary';
 
 const Dashboard: React.FC = () => {
@@ -227,9 +226,6 @@ const Dashboard: React.FC = () => {
 
       {/* Visualization Charts */}
       <DashboardCharts patients={patients} medicalRecords={medicalRecords} />
-
-      {/* Cases Comparison Chart */}
-      <CasesComparisonChart medicalRecords={medicalRecords} />
 
       {/* Modals */}
       <NewNLPAnalysis 
