@@ -296,7 +296,7 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
       </Card>
 
       {/* Row 3: Comparison of Active Cases by Type (full width) */}
-      <Card className="border-border/50 shadow-sm">
+      <Card className="border-border/50 shadow-sm overflow-visible">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
@@ -306,20 +306,20 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
             Number of patients currently being treated for each diagnosis
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-6 pb-12 pt-6">
+        <CardContent className="px-6 pb-16 pt-6">
           {casesChartData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={520}>
-                <BarChart data={casesChartData} margin={{ top: 20, right: 30, left: 30, bottom: 150 }}>
+              <ResponsiveContainer width="100%" height={600}>
+                <BarChart data={casesChartData} margin={{ top: 20, right: 30, left: 30, bottom: 180 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis 
                     dataKey="diagnosis" 
                     angle={-45} 
                     textAnchor="end" 
-                    height={140}
+                    height={160}
                     interval={0}
                     stroke="hsl(var(--muted-foreground))"
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   />
                   <YAxis 
                     stroke="hsl(var(--muted-foreground))"
