@@ -309,14 +309,14 @@ const DashboardCharts: React.FC<DashboardChartsProps> = ({ patients, medicalReco
         <CardContent className="px-6 pb-16 pt-6">
           {casesChartData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={600}>
-                <BarChart data={casesChartData} margin={{ top: 20, right: 30, left: 30, bottom: 180 }}>
+              <ResponsiveContainer width="100%" height={550}>
+                <BarChart data={casesChartData} margin={{ top: 20, right: 30, left: 60, bottom: 160 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                   <XAxis 
                     dataKey="diagnosis" 
                     angle={-45} 
                     textAnchor="end" 
-                    height={160}
+                    height={140}
                     interval={0}
                     stroke="hsl(var(--muted-foreground))"
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
