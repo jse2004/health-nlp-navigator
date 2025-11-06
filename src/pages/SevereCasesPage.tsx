@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Eye } from 'lucide-react';
+import { AlertTriangle, Eye, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MedicalRecord } from '@/data/sampleData';
 import { fetchMedicalRecords } from '@/services/dataService';
 import { toast } from 'sonner';
@@ -14,6 +15,46 @@ const SevereCasesPage = () => {
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
   const [selectedRecordForDetails, setSelectedRecordForDetails] = useState<MedicalRecord | null>(null);
   const [isRecordDetailsOpen, setIsRecordDetailsOpen] = useState(false);
+  const [isHospitalsDialogOpen, setIsHospitalsDialogOpen] = useState(false);
+
+  const hospitals = [
+    {
+      name: "Ospital ng Maynila Medical Center",
+      head: "Dr. Grace H. Padilla",
+      designation: "Officer-In-Charge / Hospital Director",
+      contact: "(+63) 2 8524 6063"
+    },
+    {
+      name: "Ospital ng Sampaloc",
+      head: "Dr. Angel Erich R. Sison",
+      designation: "Hospital Director",
+      contact: "(+63) 916 2532008"
+    },
+    {
+      name: "Ospital ng Tondo",
+      head: "Dr. Edwin C. Perez",
+      designation: "Officer-In-Charge / Hospital Director",
+      contact: "(63) 2 8251 9402"
+    },
+    {
+      name: "Gat. Andres Bonifacio Medical Center",
+      head: "Dr. Karl Oliver Laqui",
+      designation: "Hospital Director",
+      contact: "(+63) 2 8243 8845"
+    },
+    {
+      name: "Sta. Ana Hospital",
+      head: "Dr. Janet del Mundo-Tan",
+      designation: "Hospital Director",
+      contact: "(+63) 2 8516 6151"
+    },
+    {
+      name: "Justice Abad Santos General Hospital",
+      head: "Dr. Teodoro E. Martin",
+      designation: "Hospital Director",
+      contact: "(+63) 2 8353 6995"
+    }
+  ];
 
   const getSeverityColor = (severity: number) => {
     if (severity >= 9) return "destructive";
@@ -58,9 +99,19 @@ const SevereCasesPage = () => {
                 <p className="text-muted-foreground">High-priority cases requiring immediate attention</p>
               </div>
             </div>
-            <Badge variant="destructive" className="px-3 py-1.5 font-medium">
-              {severeCases.length} Active
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="destructive" 
+                onClick={() => setIsHospitalsDialogOpen(true)}
+                className="gap-2"
+              >
+                <Phone className="h-4 w-4" />
+                Contact Hospitals (City of Manila)
+              </Button>
+              <Badge variant="destructive" className="px-3 py-1.5 font-medium">
+                {severeCases.length} Active
+              </Badge>
+            </div>
           </div>
         </div>
         
@@ -154,6 +205,50 @@ const SevereCasesPage = () => {
         record={selectedRecordForDetails || undefined} 
         onClose={() => { setIsRecordDetailsOpen(false); setSelectedRecordForDetails(null); }} 
       />
+
+      {/* Hospital Contacts Dialog */}
+      <Dialog open={isHospitalsDialogOpen} onOpenChange={setIsHospitalsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <Phone className="h-6 w-6 text-destructive" />
+              Emergency Hospital Contacts - City of Manila
+            </DialogTitle>
+            <DialogDescription>
+              Contact information for immediate medical referrals and emergency cases
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {hospitals.map((hospital, index) => (
+              <div 
+                key={index}
+                className="p-4 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <h3 className="font-semibold text-lg mb-2">{hospital.name}</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground font-medium min-w-[100px]">Director:</span>
+                    <span>{hospital.head}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground font-medium min-w-[100px]">Designation:</span>
+                    <span>{hospital.designation}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-muted-foreground font-medium min-w-[100px]">Contact:</span>
+                    <a 
+                      href={`tel:${hospital.contact.replace(/[^\d+]/g, '')}`}
+                      className="text-destructive hover:underline font-semibold"
+                    >
+                      {hospital.contact}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
