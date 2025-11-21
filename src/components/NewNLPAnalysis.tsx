@@ -91,6 +91,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
   const [isSaving, setIsSaving] = useState(false);
   const [showHospitalDialog, setShowHospitalDialog] = useState(false);
   const [pendingSaveData, setPendingSaveData] = useState<any>(null);
+  const [selectedHospitals, setSelectedHospitals] = useState<any[]>([]);
 
   const form = useForm<PersonRecord>({
     defaultValues: {
@@ -130,6 +131,63 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
         setIsAnalyzing(false);
       }
     }, 800);
+  };
+
+  const allHospitals = [
+    {
+      name: 'Ospital ng Maynila Medical Center',
+      address: 'Quirino Avenue corner Roxas Boulevard, Malate, Manila',
+      availability: '24/7 Emergency Services Available'
+    },
+    {
+      name: 'Ospital ng Sampaloc',
+      address: 'Dapitan Street, Sampaloc, Manila',
+      availability: '24/7 Emergency Services Available'
+    },
+    {
+      name: 'Ospital ng Tondo',
+      address: 'Honorio Lopez Boulevard, Tondo, Manila',
+      availability: '24/7 Emergency Services Available'
+    },
+    {
+      name: 'Gat. Andres Bonifacio Medical Center',
+      address: 'Naval Street, Tondo, Manila',
+      availability: '24/7 Emergency Services Available'
+    },
+    {
+      name: 'Sta. Ana Hospital',
+      address: 'Maceda Street, Sta. Ana, Manila',
+      availability: '24/7 Emergency Services Available'
+    },
+    {
+      name: 'Justice Abad Santos General Hospital',
+      address: 'Fugoso Street, Tondo, Manila',
+      availability: '24/7 Emergency Services Available'
+    },
+    {
+      name: 'Our Lady of Lourdes Hospital',
+      address: '46 P. Sanchez St., Sta. Mesa, Manila',
+      availability: '24/7 Emergency Services Available'
+    },
+    {
+      name: 'University of Santo Tomas Hospital',
+      address: 'España Blvd., Sampaloc, Manila',
+      availability: '24/7 Emergency Services Available'
+    }
+  ];
+
+  const selectRandomHospitals = () => {
+    const pgh = {
+      name: 'Philippine General Hospital',
+      address: 'Taft Avenue, Ermita, Manila',
+      availability: '24/7 Emergency Services Available'
+    };
+    
+    // Randomly select 2 hospitals from the list
+    const shuffled = [...allHospitals].sort(() => Math.random() - 0.5);
+    const randomTwo = shuffled.slice(0, 2);
+    
+    return [pgh, ...randomTwo];
   };
 
   const generateRecommendedActions = (analysisResult: any): string[] => {
@@ -186,6 +244,7 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
     // Check if severity is critical (8 or higher)
     if (severity >= 8) {
       setPendingSaveData(newRecord);
+      setSelectedHospitals(selectRandomHospitals());
       setShowHospitalDialog(true);
       return;
     }
@@ -372,39 +431,19 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
             <Card>
               <CardContent className="pt-4">
                 <div className="space-y-3">
-                  <div>
-                    <h4 className="font-semibold text-base">1. Philippine General Hospital</h4>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>Taft Avenue, Ermita, Manila</span>
+                  {selectedHospitals.map((hospital, index) => (
+                    <div key={index}>
+                      <h4 className="font-semibold text-base">{index + 1}. {hospital.name}</h4>
+                      <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
+                        <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>{hospital.address}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <Clock className="h-4 w-4 flex-shrink-0" />
+                        <span>{hospital.availability}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Clock className="h-4 w-4 flex-shrink-0" />
-                      <span>24/7 Emergency Services Available</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base">2. Our Lady of Lourdes Hospital</h4>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>46 P. Sanchez St., Sta. Mesa, Manila</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Clock className="h-4 w-4 flex-shrink-0" />
-                      <span>24/7 Emergency Services Available</span>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-base">3. University of Santo Tomas Hospital</h4>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>España Blvd., Sampaloc, Manila</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Clock className="h-4 w-4 flex-shrink-0" />
-                      <span>24/7 Emergency Services Available</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
