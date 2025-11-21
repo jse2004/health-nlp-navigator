@@ -8,8 +8,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { analyzeMedicalText } from '@/utils/nlpProcessing';
-import { FileText, Save, User, Stethoscope, Pill, AlertTriangle } from 'lucide-react';
+import { FileText, Save, User, Stethoscope, Pill, AlertTriangle, AlertCircle, MapPin, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Form,
   FormField,
@@ -79,6 +89,8 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showHospitalDialog, setShowHospitalDialog] = useState(false);
+  const [pendingSaveData, setPendingSaveData] = useState<any>(null);
 
   const form = useForm<PersonRecord>({
     defaultValues: {
@@ -140,36 +152,52 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
       toast.error('Please enter name, age, person type, and symptoms');
       return;
     }
+    
+    const recommendedActions = analysisResult ? generateRecommendedActions(analysisResult) : [];
+    const severity = analysisResult?.severity || 5;
+    
+    const newRecord = {
+      patient_name: data.name,
+      diagnosis: data.diagnosis || 'Pending evaluation',
+      doctor_notes: data.symptoms,
+      notes: data.medication || 'N/A',
+      severity: severity,
+      date: new Date().toISOString(),
+      recommended_actions: recommendedActions,
+      person_type: data.personType,
+      full_name: data.name,
+      gender: data.gender || 'Other',
+      age: parseInt(data.age) || 0,
+      position: data.position || null,
+      faculty: data.faculty || null,
+      patient_data: {
+        name: data.name,
+        person_type: data.personType as 'student' | 'professor' | 'employee' | 'guest',
+        student_id: data.studentId || undefined,
+        course_year: data.courseYear || undefined,
+        college_department: (data.collegeDepartment as any) || undefined,
+        position: data.position || undefined,
+        faculty: data.faculty || undefined,
+        age: parseInt(data.age) || 0,
+        gender: data.gender || 'Other'
+      }
+    };
+    
+    // Check if severity is critical (8 or higher)
+    if (severity >= 8) {
+      setPendingSaveData(newRecord);
+      setShowHospitalDialog(true);
+      return;
+    }
+
+    // Save directly if not critical
+    await saveRecord(newRecord);
+  };
+
+  const saveRecord = async (record: any) => {
     setIsSaving(true);
     try {
-      const recommendedActions = analysisResult ? generateRecommendedActions(analysisResult) : [];
-      const newRecord = {
-        patient_name: data.name,
-        diagnosis: data.diagnosis || 'Pending evaluation',
-        doctor_notes: data.symptoms,
-        notes: data.medication || 'N/A',
-        severity: analysisResult?.severity || 5,
-        date: new Date().toISOString(),
-        recommended_actions: recommendedActions,
-        person_type: data.personType,
-        full_name: data.name,
-        gender: data.gender || 'Other',
-        age: parseInt(data.age) || 0,
-        position: data.position || null,
-        faculty: data.faculty || null,
-        patient_data: {
-          name: data.name,
-          person_type: data.personType as 'student' | 'professor' | 'employee' | 'guest',
-          student_id: data.studentId || undefined,
-          course_year: data.courseYear || undefined,
-          college_department: (data.collegeDepartment as any) || undefined,
-          position: data.position || undefined,
-          faculty: data.faculty || undefined,
-          age: parseInt(data.age) || 0,
-          gender: data.gender || 'Other'
-        }
-      };
-      const savedRecord = await saveMedicalRecord(newRecord);
+      const savedRecord = await saveMedicalRecord(record);
       toast.success(`Medical record saved: ${savedRecord.id}`);
       window.dispatchEvent(new Event('savedAnalysesUpdated'));
       if (onSaved) onSaved();
@@ -181,9 +209,19 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
     }
   };
 
+  const handleHospitalAcknowledgment = async () => {
+    setShowHospitalDialog(false);
+    if (pendingSaveData) {
+      await saveRecord(pendingSaveData);
+      setPendingSaveData(null);
+    }
+  };
+
   const handleClose = () => {
     form.reset();
     setAnalysisResult(null);
+    setShowHospitalDialog(false);
+    setPendingSaveData(null);
     onClose();
   };
 
@@ -316,6 +354,75 @@ const NewNLPAnalysis: React.FC<NewNLPAnalysisProps> = ({ isOpen, onClose, onSave
           </Form>
         </div>
       </SheetContent>
+
+      <AlertDialog open={showHospitalDialog} onOpenChange={setShowHospitalDialog}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Nearest Hospital Recommendation - Critical Case
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Based on the severity of symptoms, immediate hospital care is strongly recommended. 
+              Please contact one of the following hospitals:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4 my-4">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-base">1. Philippine General Hospital</h4>
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>Taft Avenue, Ermita, Manila</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <span>24/7 Emergency Services Available</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-base">2. Our Lady of Lourdes Hospital</h4>
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>46 P. Sanchez St., Sta. Mesa, Manila</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <span>24/7 Emergency Services Available</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-base">3. University of Santo Tomas Hospital</h4>
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>España Blvd., Sampaloc, Manila</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <Clock className="h-4 w-4 flex-shrink-0" />
+                      <span>24/7 Emergency Services Available</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowHospitalDialog(false);
+              setPendingSaveData(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleHospitalAcknowledgment}>
+              I Acknowledge - Proceed to Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 };
