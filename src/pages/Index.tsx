@@ -35,11 +35,6 @@ const Index = () => {
         {/* Sidebar Navigation */}
         <aside className="w-64 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-r border-gray-200/50 dark:border-gray-700/50 shadow-lg">
           <div className="p-6">
-            <div className="mb-8">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Navigation</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Select a section</p>
-            </div>
-            
             <nav className="space-y-2">
               <button
                 onClick={() => setActiveSection('dashboard')}
